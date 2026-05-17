@@ -1,19 +1,3 @@
----
-title: Chewbacca Cognito CLI Auth Flow Lab - HTTPS Version
-description: HTTP API walkthrough for Cognito USER_AUTH, challenge selection, MFA, JWT validation, API Gateway, and Lambda using a Chewbacca, Jedi, and Sith theme.
-created: 2026-05-16
-updated: 2026-05-16
-tags:
-  - aws
-  - cognito
-  - lambda
-  - api-gateway
-  - jwt
-  - auth-flow
-type: runbook
-status: active
----
-
 # Chewbacca Cognito CLI Auth Flow Lab - HTTPS Version
 
 HTTP API implementation of the Chewbacca Cognito CLI auth-flow lab.<br>

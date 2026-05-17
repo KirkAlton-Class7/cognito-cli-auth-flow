@@ -1,20 +1,3 @@
----
-title: Chewbacca Cognito CLI Auth Flow Lab - REST Version
-description: REST API walkthrough for Cognito USER_AUTH, challenge selection, MFA, Cognito User Pool authorizers, API Gateway, and Lambda using a Chewbacca, Jedi, and Sith theme.
-created: 2026-05-16
-updated: 2026-05-16
-tags:
-  - aws
-  - cognito
-  - lambda
-  - api-gateway
-  - rest-api
-  - jwt
-  - auth-flow
-type: runbook
-status: active
----
-
 # Chewbacca Cognito CLI Auth Flow Lab - REST Version
 
 REST API implementation of the Chewbacca Cognito CLI auth-flow lab.<br>
