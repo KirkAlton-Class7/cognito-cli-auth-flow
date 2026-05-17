@@ -264,11 +264,12 @@ The response can include:
 ```json
 {
   "ChallengeName": "SELECT_CHALLENGE",
+  "Session": "AYABe...<SELECT_CHALLENGE_SESSION>",
+  "ChallengeParameters": {},
   "AvailableChallenges": [
     "PASSWORD",
     "PASSWORD_SRP"
-  ],
-  "Session": "..."
+  ]
 }
 ```
 
@@ -685,11 +686,11 @@ Expected:
 {
   "ChallengeName": "SELECT_CHALLENGE",
   "Session": "AYABe...<SELECT_CHALLENGE_SESSION>",
+  "ChallengeParameters": {},
   "AvailableChallenges": [
     "PASSWORD",
     "PASSWORD_SRP"
-  ],
-  "ChallengeParameters": {}
+  ]
 }
 ```
 
@@ -715,7 +716,10 @@ Expected:
 {
   "ChallengeName": "SOFTWARE_TOKEN_MFA",
   "Session": "AYABe...<SOFTWARE_TOKEN_MFA_SESSION>",
-  "ChallengeParameters": {}
+  "ChallengeParameters": {
+    "FRIENDLY_DEVICE_NAME": "Chewbacca CLI REST",
+    "USER_ID_FOR_SRP": "chewbacca"
+  }
 }
 ```
 
@@ -741,11 +745,11 @@ Expected:
 {
   "ChallengeParameters": {},
   "AuthenticationResult": {
-    "AccessToken": "eyJraWQiOiJ...<ACCESS_TOKEN_HEADER>...eyJ1c2VybmFtZSI6ImNoZXdiYWNjYSJ9...<ACCESS_TOKEN_SIGNATURE>",
+    "AccessToken": "eyJraWQiOiJNek1LXC8yZzgz...eyJ1c2VybmFtZSI6ImNoZXdiYWNjYSJ9...<ACCESS_TOKEN_SIGNATURE>",
     "ExpiresIn": 900,
     "TokenType": "Bearer",
     "RefreshToken": "eyJjdHkiOiJKV1QiLCJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAifQ...<REFRESH_TOKEN>",
-    "IdToken": "eyJraWQiOiJ...<ID_TOKEN_HEADER>...eyJlbWFpbCI6ImNoZXdiYWNjYUBleGFtcGxlLmNvbSJ9...<ID_TOKEN_SIGNATURE>"
+    "IdToken": "eyJraWQiOiJnVkkrSDRcL0Ja...eyJlbWFpbCI6ImNoZXdiYWNjYUBleGFtcGxlLmNvbSJ9...<ID_TOKEN_SIGNATURE>"
   }
 }
 ```
@@ -778,11 +782,11 @@ Expected:
 {
   "ChallengeName": "SELECT_CHALLENGE",
   "Session": "AYABe...<SELECT_CHALLENGE_SESSION>",
+  "ChallengeParameters": {},
   "AvailableChallenges": [
     "PASSWORD",
     "PASSWORD_SRP"
-  ],
-  "ChallengeParameters": {}
+  ]
 }
 ```
 
@@ -815,7 +819,10 @@ Expected:
 {
   "ChallengeName": "SOFTWARE_TOKEN_MFA",
   "Session": "AYABe...<SOFTWARE_TOKEN_MFA_SESSION>",
-  "ChallengeParameters": {}
+  "ChallengeParameters": {
+    "FRIENDLY_DEVICE_NAME": "Chewbacca CLI REST",
+    "USER_ID_FOR_SRP": "chewbacca"
+  }
 }
 ```
 
@@ -846,11 +853,11 @@ Expected:
 {
   "ChallengeParameters": {},
   "AuthenticationResult": {
-    "AccessToken": "eyJraWQiOiJ...<ACCESS_TOKEN_HEADER>...eyJ0b2tlbl91c2UiOiJhY2Nlc3Mi...<ACCESS_TOKEN_SIGNATURE>",
+    "AccessToken": "eyJraWQiOiJNek1LXC8yZzgz...<ACCESS_TOKEN_PAYLOAD>...<ACCESS_TOKEN_SIGNATURE>",
     "ExpiresIn": 900,
     "TokenType": "Bearer",
     "RefreshToken": "eyJjdHkiOiJKV1QiLCJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAifQ...<REFRESH_TOKEN>",
-    "IdToken": "eyJraWQiOiJ...<ID_TOKEN_HEADER>...eyJ0b2tlbl91c2UiOiJpZCIsImVtYWlsIjoiY2hld2JhY2NhQGV4YW1wbGUuY29tIn0...<ID_TOKEN_SIGNATURE>"
+    "IdToken": "eyJraWQiOiJnVkkrSDRcL0Ja...eyJ0b2tlbl91c2UiOiJpZCIsImVtYWlsIjoiY2hld2JhY2NhQGV4YW1wbGUuY29tIn0...<ID_TOKEN_SIGNATURE>"
   }
 }
 ```
@@ -877,9 +884,9 @@ echo "${REFRESH_TOKEN:0:24}"
 Expected:
 
 ```text
-eyJraWQiOiJ...<access>
-eyJraWQiOiJ...<id>
-eyJjdHkiOiJKV1QiLCJlbm...<refresh>
+eyJraWQiOiJNek1LXC8yZzgz
+eyJraWQiOiJnVkkrSDRcL0Ja
+eyJjdHkiOiJKV1QiLCJlbmMi
 ```
 
 > [!important]
@@ -1001,6 +1008,9 @@ export COGNITO_AUTHORIZER_ID=$(aws apigateway create-authorizer \
   --region "$AWS_REGION")
 ```
 
+> [!note]
+> If API Gateway returns `Authorizer name must be unique`, the authorizer already exists for this REST API. Reuse the existing authorizer ID instead of creating a duplicate.
+
 Attach authorizer to method:
 
 ```bash
@@ -1106,6 +1116,7 @@ The CLI flow is better for understanding raw challenge mechanics. Hosted UI is b
 | `{"message":"The incoming token has expired"}` | API Gateway received an expired JWT | Re-run the auth flow and export a fresh route token |
 | HTTP API returns `401` | Missing/expired access token or wrong issuer/audience | Re-export `ACCESS_TOKEN` and verify authorizer config |
 | REST API returns `401` | Used access token on no-scope method, wrong user pool ARN, or stale deployment | Use `ID_TOKEN`, confirm authorizer, redeploy |
+| `Authorizer name must be unique` | The REST API already has an authorizer with that name | Reuse the existing authorizer ID instead of creating a duplicate |
 | Lambda never logs | API Gateway rejected request before invocation | Check authorizer result before debugging Lambda |
 | REST method still public | Method was updated but stage was not redeployed | Run `create-deployment` again |
 

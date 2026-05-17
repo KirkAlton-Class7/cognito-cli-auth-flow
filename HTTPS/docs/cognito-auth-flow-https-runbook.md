@@ -713,11 +713,11 @@ Expected output:
 {
   "ChallengeParameters": {},
   "AuthenticationResult": {
-    "AccessToken": "eyJraWQiOiJ...<ACCESS_TOKEN_HEADER>...eyJ0b2tlbl91c2UiOiJhY2Nlc3Mi...<ACCESS_TOKEN_SIGNATURE>",
+    "AccessToken": "eyJraWQiOiJNek1LXC8yZzgz...<ACCESS_TOKEN_PAYLOAD>...<ACCESS_TOKEN_SIGNATURE>",
     "ExpiresIn": 900,
     "TokenType": "Bearer",
     "RefreshToken": "eyJjdHkiOiJKV1QiLCJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAifQ...<REFRESH_TOKEN>",
-    "IdToken": "eyJraWQiOiJ...<ID_TOKEN_HEADER>...eyJ0b2tlbl91c2UiOiJpZCIsImVtYWlsIjoiY2hld2JhY2NhQGV4YW1wbGUuY29tIn0...<ID_TOKEN_SIGNATURE>"
+    "IdToken": "eyJraWQiOiJnVkkrSDRcL0Ja...eyJ0b2tlbl91c2UiOiJpZCIsImVtYWlsIjoiY2hld2JhY2NhQGV4YW1wbGUuY29tIn0...<ID_TOKEN_SIGNATURE>"
   }
 }
 ```
@@ -795,11 +795,11 @@ Expected output:
 {
   "ChallengeName": "SELECT_CHALLENGE",
   "Session": "AYABe...<SELECT_CHALLENGE_SESSION>",
+  "ChallengeParameters": {},
   "AvailableChallenges": [
     "PASSWORD",
     "PASSWORD_SRP"
-  ],
-  "ChallengeParameters": {}
+  ]
 }
 ```
 
@@ -827,7 +827,10 @@ Expected output:
 {
   "ChallengeName": "SOFTWARE_TOKEN_MFA",
   "Session": "AYABe...<SOFTWARE_TOKEN_MFA_SESSION>",
-  "ChallengeParameters": {}
+  "ChallengeParameters": {
+    "FRIENDLY_DEVICE_NAME": "Chewbacca CLI",
+    "USER_ID_FOR_SRP": "chewbacca"
+  }
 }
 ```
 
@@ -855,11 +858,11 @@ Expected output:
 {
   "ChallengeParameters": {},
   "AuthenticationResult": {
-    "AccessToken": "eyJraWQiOiJ...<ACCESS_TOKEN_HEADER>...eyJ1c2VybmFtZSI6ImNoZXdiYWNjYSJ9...<ACCESS_TOKEN_SIGNATURE>",
+    "AccessToken": "eyJraWQiOiJNek1LXC8yZzgz...eyJ1c2VybmFtZSI6ImNoZXdiYWNjYSJ9...<ACCESS_TOKEN_SIGNATURE>",
     "ExpiresIn": 900,
     "TokenType": "Bearer",
     "RefreshToken": "eyJjdHkiOiJKV1QiLCJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAifQ...<REFRESH_TOKEN>",
-    "IdToken": "eyJraWQiOiJ...<ID_TOKEN_HEADER>...eyJlbWFpbCI6ImNoZXdiYWNjYUBleGFtcGxlLmNvbSJ9...<ID_TOKEN_SIGNATURE>"
+    "IdToken": "eyJraWQiOiJnVkkrSDRcL0Ja...eyJlbWFpbCI6ImNoZXdiYWNjYUBleGFtcGxlLmNvbSJ9...<ID_TOKEN_SIGNATURE>"
   }
 }
 ```
@@ -917,11 +920,11 @@ Expected output:
 {
   "ChallengeName": "SELECT_CHALLENGE",
   "Session": "AYABe...<SELECT_CHALLENGE_SESSION>",
+  "ChallengeParameters": {},
   "AvailableChallenges": [
     "PASSWORD",
     "PASSWORD_SRP"
-  ],
-  "ChallengeParameters": {}
+  ]
 }
 ```
 
@@ -935,7 +938,7 @@ echo "${SESSION:0:20}"
 Expected output:
 
 ```text
-<first-20-characters-of-session>
+AYABeMud54rEoSpP-o6C
 ```
 
 ### 13.3 Export Run: Choose `PASSWORD`
@@ -959,7 +962,10 @@ Expected output:
 {
   "ChallengeName": "SOFTWARE_TOKEN_MFA",
   "Session": "AYABe...<SOFTWARE_TOKEN_MFA_SESSION>",
-  "ChallengeParameters": {}
+  "ChallengeParameters": {
+    "FRIENDLY_DEVICE_NAME": "Chewbacca CLI",
+    "USER_ID_FOR_SRP": "chewbacca"
+  }
 }
 ```
 
@@ -998,11 +1004,11 @@ Expected output:
 {
   "ChallengeParameters": {},
   "AuthenticationResult": {
-    "AccessToken": "eyJraWQiOiJ...<ACCESS_TOKEN_HEADER>...eyJ0b2tlbl91c2UiOiJhY2Nlc3Mi...<ACCESS_TOKEN_SIGNATURE>",
+    "AccessToken": "eyJraWQiOiJNek1LXC8yZzgz...<ACCESS_TOKEN_PAYLOAD>...<ACCESS_TOKEN_SIGNATURE>",
     "ExpiresIn": 900,
     "TokenType": "Bearer",
     "RefreshToken": "eyJjdHkiOiJKV1QiLCJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAifQ...<REFRESH_TOKEN>",
-    "IdToken": "eyJraWQiOiJ...<ID_TOKEN_HEADER>...eyJ0b2tlbl91c2UiOiJpZCIsImVtYWlsIjoiY2hld2JhY2NhQGV4YW1wbGUuY29tIn0...<ID_TOKEN_SIGNATURE>"
+    "IdToken": "eyJraWQiOiJnVkkrSDRcL0Ja...eyJ0b2tlbl91c2UiOiJpZCIsImVtYWlsIjoiY2hld2JhY2NhQGV4YW1wbGUuY29tIn0...<ID_TOKEN_SIGNATURE>"
   }
 }
 ```
@@ -1022,9 +1028,9 @@ echo "${REFRESH_TOKEN:0:24}"
 Expected output:
 
 ```text
-eyJraWQiOiJ...<access>
-eyJraWQiOiJ...<id>
-eyJjdHkiOiJKV1QiLCJlbm...<refresh>
+eyJraWQiOiJNek1LXC8yZzgz
+eyJraWQiOiJnVkkrSDRcL0Ja
+eyJjdHkiOiJKV1QiLCJlbmMi
 ```
 
 > [!IMPORTANT]
@@ -1132,6 +1138,10 @@ Expected:
 
 ```text
 HTTP/2 401
+content-type: application/json
+...
+
+{"message":"Unauthorized"}
 ```
 
 Manual Check: test the Jedi route with the access token copied from **12.5 Manual Check: Respond To `SOFTWARE_TOKEN_MFA`**. Get `<API_ENDPOINT>` from the HTTP API stage URL.
@@ -1214,7 +1224,10 @@ Expected:
 {
   "ChallengeName": "SOFTWARE_TOKEN_MFA",
   "Session": "AYABe...<SOFTWARE_TOKEN_MFA_SESSION>",
-  "ChallengeParameters": {}
+  "ChallengeParameters": {
+    "FRIENDLY_DEVICE_NAME": "Chewbacca CLI",
+    "USER_ID_FOR_SRP": "chewbacca"
+  }
 }
 ```
 

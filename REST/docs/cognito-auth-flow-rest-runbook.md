@@ -755,11 +755,11 @@ Expected output:
 {
   "ChallengeParameters": {},
   "AuthenticationResult": {
-    "AccessToken": "eyJraWQiOiJ...<ACCESS_TOKEN_HEADER>...eyJ0b2tlbl91c2UiOiJhY2Nlc3Mi...<ACCESS_TOKEN_SIGNATURE>",
+    "AccessToken": "eyJraWQiOiJNek1LXC8yZzgz...<ACCESS_TOKEN_PAYLOAD>...<ACCESS_TOKEN_SIGNATURE>",
     "ExpiresIn": 900,
     "TokenType": "Bearer",
     "RefreshToken": "eyJjdHkiOiJKV1QiLCJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAifQ...<REFRESH_TOKEN>",
-    "IdToken": "eyJraWQiOiJ...<ID_TOKEN_HEADER>...eyJ0b2tlbl91c2UiOiJpZCIsImVtYWlsIjoiY2hld2JhY2NhQGV4YW1wbGUuY29tIn0...<ID_TOKEN_SIGNATURE>"
+    "IdToken": "eyJraWQiOiJnVkkrSDRcL0Ja...eyJ0b2tlbl91c2UiOiJpZCIsImVtYWlsIjoiY2hld2JhY2NhQGV4YW1wbGUuY29tIn0...<ID_TOKEN_SIGNATURE>"
   }
 }
 ```
@@ -837,11 +837,11 @@ Expected output:
 {
   "ChallengeName": "SELECT_CHALLENGE",
   "Session": "AYABe...<SELECT_CHALLENGE_SESSION>",
+  "ChallengeParameters": {},
   "AvailableChallenges": [
     "PASSWORD",
     "PASSWORD_SRP"
-  ],
-  "ChallengeParameters": {}
+  ]
 }
 ```
 
@@ -869,7 +869,10 @@ Expected output:
 {
   "ChallengeName": "SOFTWARE_TOKEN_MFA",
   "Session": "AYABe...<SOFTWARE_TOKEN_MFA_SESSION>",
-  "ChallengeParameters": {}
+  "ChallengeParameters": {
+    "FRIENDLY_DEVICE_NAME": "Chewbacca CLI REST",
+    "USER_ID_FOR_SRP": "chewbacca"
+  }
 }
 ```
 
@@ -897,11 +900,11 @@ Expected output:
 {
   "ChallengeParameters": {},
   "AuthenticationResult": {
-    "AccessToken": "eyJraWQiOiJ...<ACCESS_TOKEN_HEADER>...eyJ1c2VybmFtZSI6ImNoZXdiYWNjYSJ9...<ACCESS_TOKEN_SIGNATURE>",
+    "AccessToken": "eyJraWQiOiJNek1LXC8yZzgz...eyJ1c2VybmFtZSI6ImNoZXdiYWNjYSJ9...<ACCESS_TOKEN_SIGNATURE>",
     "ExpiresIn": 900,
     "TokenType": "Bearer",
     "RefreshToken": "eyJjdHkiOiJKV1QiLCJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAifQ...<REFRESH_TOKEN>",
-    "IdToken": "eyJraWQiOiJ...<ID_TOKEN_HEADER>...eyJlbWFpbCI6ImNoZXdiYWNjYUBleGFtcGxlLmNvbSJ9...<ID_TOKEN_SIGNATURE>"
+    "IdToken": "eyJraWQiOiJnVkkrSDRcL0Ja...eyJlbWFpbCI6ImNoZXdiYWNjYUBleGFtcGxlLmNvbSJ9...<ID_TOKEN_SIGNATURE>"
   }
 }
 ```
@@ -959,11 +962,11 @@ Expected output:
 {
   "ChallengeName": "SELECT_CHALLENGE",
   "Session": "AYABe...<SELECT_CHALLENGE_SESSION>",
+  "ChallengeParameters": {},
   "AvailableChallenges": [
     "PASSWORD",
     "PASSWORD_SRP"
-  ],
-  "ChallengeParameters": {}
+  ]
 }
 ```
 
@@ -977,7 +980,7 @@ echo "${SESSION:0:20}"
 Expected output:
 
 ```text
-<first-20-characters-of-session>
+AYABeMud54rEoSpP-o6C
 ```
 
 ### 13.3 Export Run: Choose `PASSWORD`
@@ -1001,7 +1004,10 @@ Expected output:
 {
   "ChallengeName": "SOFTWARE_TOKEN_MFA",
   "Session": "AYABe...<SOFTWARE_TOKEN_MFA_SESSION>",
-  "ChallengeParameters": {}
+  "ChallengeParameters": {
+    "FRIENDLY_DEVICE_NAME": "Chewbacca CLI REST",
+    "USER_ID_FOR_SRP": "chewbacca"
+  }
 }
 ```
 
@@ -1040,11 +1046,11 @@ Expected output:
 {
   "ChallengeParameters": {},
   "AuthenticationResult": {
-    "AccessToken": "eyJraWQiOiJ...<ACCESS_TOKEN_HEADER>...eyJ0b2tlbl91c2UiOiJhY2Nlc3Mi...<ACCESS_TOKEN_SIGNATURE>",
+    "AccessToken": "eyJraWQiOiJNek1LXC8yZzgz...<ACCESS_TOKEN_PAYLOAD>...<ACCESS_TOKEN_SIGNATURE>",
     "ExpiresIn": 900,
     "TokenType": "Bearer",
     "RefreshToken": "eyJjdHkiOiJKV1QiLCJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAifQ...<REFRESH_TOKEN>",
-    "IdToken": "eyJraWQiOiJ...<ID_TOKEN_HEADER>...eyJ0b2tlbl91c2UiOiJpZCIsImVtYWlsIjoiY2hld2JhY2NhQGV4YW1wbGUuY29tIn0...<ID_TOKEN_SIGNATURE>"
+    "IdToken": "eyJraWQiOiJnVkkrSDRcL0Ja...eyJ0b2tlbl91c2UiOiJpZCIsImVtYWlsIjoiY2hld2JhY2NhQGV4YW1wbGUuY29tIn0...<ID_TOKEN_SIGNATURE>"
   }
 }
 ```
@@ -1064,9 +1070,9 @@ echo "${REFRESH_TOKEN:0:24}"
 Expected output:
 
 ```text
-eyJraWQiOiJ...<access>
-eyJraWQiOiJ...<id>
-eyJjdHkiOiJKV1QiLCJlbm...<refresh>
+eyJraWQiOiJNek1LXC8yZzgz
+eyJraWQiOiJnVkkrSDRcL0Ja
+eyJjdHkiOiJKV1QiLCJlbmMi
 ```
 
 > [!IMPORTANT]
@@ -1117,6 +1123,9 @@ export COGNITO_AUTHORIZER_ID=$(aws apigateway create-authorizer \
   --output text \
   --region "$AWS_REGION")
 ```
+
+> [!NOTE]
+> If API Gateway returns `Authorizer name must be unique`, the authorizer already exists for this REST API. Reuse the existing authorizer ID from the console or from the previous create-authorizer output instead of creating a duplicate.
 
 Attach the authorizer to both methods:
 
@@ -1173,6 +1182,10 @@ Expected:
 
 ```text
 HTTP/2 401
+content-type: application/json
+...
+
+{"message":"Unauthorized"}
 ```
 
 Manual Check: test the Jedi route with the ID token copied from **12.5 Manual Check: Respond To `SOFTWARE_TOKEN_MFA`**. Get `<API_ENDPOINT>` from the REST API invoke URL.
@@ -1255,7 +1268,10 @@ Expected:
 {
   "ChallengeName": "SOFTWARE_TOKEN_MFA",
   "Session": "AYABe...<SOFTWARE_TOKEN_MFA_SESSION>",
-  "ChallengeParameters": {}
+  "ChallengeParameters": {
+    "FRIENDLY_DEVICE_NAME": "Chewbacca CLI REST",
+    "USER_ID_FOR_SRP": "chewbacca"
+  }
 }
 ```
 
@@ -1268,6 +1284,7 @@ This is simpler for CLI testing, but it does not teach the `SELECT_CHALLENGE` ne
 | `Unable to verify secret hash` | Wrong username, client ID, client secret, or copied hash | Regenerate `SECRET_HASH` with the exact same username used in the auth request |
 | `InvalidParameterException` for `USER_AUTH` | App client does not allow `ALLOW_USER_AUTH` or region/account does not support choice-based auth | Recreate/update app client with `ALLOW_USER_AUTH`; use `USER_PASSWORD_AUTH` if unavailable |
 | `Invalid session due to a mismatched auth flow` | The `Session` came from the wrong auth flow, an older challenge chain, another app client, or another user | Restart from `initiate-auth --auth-flow USER_AUTH`, copy the fresh `SELECT_CHALLENGE` session, then use the new MFA session returned by the password step |
+| `Authorizer name must be unique` | The REST API already has an authorizer with that name | Reuse the existing authorizer ID instead of creating a duplicate |
 | `NotAuthorizedException` | Wrong password, stale session, wrong secret hash, or expired MFA step | Start the flow again from `initiate-auth` |
 | `CodeMismatchException` | MFA code expired or copied incorrectly | Wait for a fresh authenticator code |
 | `{"message":"The incoming token has expired"}` | ID token expired before the protected route test | Re-run the auth flow and export a fresh `ID_TOKEN` |
