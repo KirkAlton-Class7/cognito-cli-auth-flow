@@ -470,7 +470,16 @@ export USER_POOL_ARN="arn:aws:cognito-idp:${AWS_REGION}:${AWS_ACCOUNT_ID}:userpo
 
 The app client intentionally has a secret so the lab teaches `SECRET_HASH`.
 
-Console path: open the user pool -> **App clients** -> **Create app client**. Enable the auth flows shown below and generate a client secret.
+Console path: open the user pool -> **App clients** -> **Create app client**. Enable the auth flows shown below, generate a client secret, and set token expiration for the lab:
+
+| Token | Expiration |
+| --- | --- |
+| Access token | `15 minutes` |
+| ID token | `15 minutes` |
+| Refresh token | `1 day` |
+
+> [!note]
+> The short access and ID token lifetime is intentional. It makes API Gateway's expired-token behavior easy to observe while keeping the lab quick to repeat.
 
 Equivalent CLI reference:
 
@@ -480,6 +489,10 @@ export CLIENT_JSON=$(aws cognito-idp create-user-pool-client \
   --client-name "$USER_POOL_CLIENT_NAME" \
   --generate-secret \
   --explicit-auth-flows ALLOW_USER_AUTH ALLOW_USER_PASSWORD_AUTH ALLOW_REFRESH_TOKEN_AUTH \
+  --access-token-validity 15 \
+  --id-token-validity 15 \
+  --refresh-token-validity 1 \
+  --token-validity-units AccessToken=minutes,IdToken=minutes,RefreshToken=days \
   --query 'UserPoolClient' \
   --output json \
   --region "$AWS_REGION")
@@ -488,6 +501,7 @@ export CLIENT_JSON=$(aws cognito-idp create-user-pool-client \
 ```bash
 export CLIENT_ID=$(echo "$CLIENT_JSON" | jq -r '.ClientId')
 export CLIENT_SECRET=$(echo "$CLIENT_JSON" | jq -r '.ClientSecret')
+echo "$CLIENT_JSON" | jq '{AccessTokenValidity,IdTokenValidity,RefreshTokenValidity,TokenValidityUnits}'
 ```
 
 ### 7. Create Test User
@@ -762,7 +776,7 @@ echo "${REFRESH_TOKEN:0:24}"
 | --- | --- | --- |
 | MFA enrollment `ACCESS_TOKEN` | `associate-software-token`, `verify-software-token`, `set-user-mfa-preference` | Re-run the direct `USER_PASSWORD_AUTH` command and export a new temporary `ACCESS_TOKEN` |
 | Cognito challenge `SESSION` | `SELECT_CHALLENGE` and `SOFTWARE_TOKEN_MFA` responses | Restart the `USER_AUTH` flow from `initiate-auth` |
-| API route token | HTTP API `ACCESS_TOKEN` or REST API `ID_TOKEN` | Re-run the auth flow, export a fresh token, and retry curl |
+| API route token | HTTP API `ACCESS_TOKEN` or REST API `ID_TOKEN` | Expires after 15 minutes; re-run the auth flow, export a fresh token, and retry curl |
 | Refresh token | Token renewal workflows outside this barebones lab | Keep private; do not send it to API Gateway |
 
 ## HTTP API Protected Route Pattern

@@ -480,7 +480,16 @@ echo "$COGNITO_ISSUER"
 
 This lab uses an app client with a client secret on purpose so you can learn `SECRET_HASH`.
 
-Console path: open the user pool -> **App clients** -> **Create app client**. Enable the auth flows shown below and generate a client secret.
+Console path: open the user pool -> **App clients** -> **Create app client**. Enable the auth flows shown below, generate a client secret, and set token expiration for the lab:
+
+| Token | Expiration |
+| --- | --- |
+| Access token | `15 minutes` |
+| ID token | `15 minutes` |
+| Refresh token | `1 day` |
+
+> [!NOTE]
+> The protected HTTP API route uses the access token. A 15-minute access token makes expiration behavior easy to observe without waiting through a long default session.
 
 Equivalent CLI reference:
 
@@ -490,6 +499,10 @@ export CLIENT_JSON=$(aws cognito-idp create-user-pool-client \
   --client-name "$USER_POOL_CLIENT_NAME" \
   --generate-secret \
   --explicit-auth-flows ALLOW_USER_AUTH ALLOW_USER_PASSWORD_AUTH ALLOW_REFRESH_TOKEN_AUTH \
+  --access-token-validity 15 \
+  --id-token-validity 15 \
+  --refresh-token-validity 1 \
+  --token-validity-units AccessToken=minutes,IdToken=minutes,RefreshToken=days \
   --query 'UserPoolClient' \
   --output json \
   --region "$AWS_REGION")
@@ -507,6 +520,7 @@ Validation:
 ```bash
 echo "$CLIENT_ID"
 echo "${CLIENT_SECRET:0:8}..."
+echo "$CLIENT_JSON" | jq '{AccessTokenValidity,IdTokenValidity,RefreshTokenValidity,TokenValidityUnits}'
 ```
 
 > [!IMPORTANT]
