@@ -219,7 +219,8 @@ Create the Jedi Python Lambda:
 
 Console path: **Lambda** -> **Create function** -> **Author from scratch**. Use the function names, runtimes, handlers, and ZIP files shown below.
 
-Keep these values handy for API Gateway integration:
+> [!IMPORTANT]
+> Keep these values handy for API Gateway integration:
 
 | Parameter | Console Location | Value |
 | --- | --- | --- |
@@ -328,7 +329,8 @@ Validation:
 
 Console path: **API Gateway** -> **Create API** -> **HTTP API** -> API name from `API_NAME`.
 
-Keep these values handy for route tests and authorizer setup:
+> [!IMPORTANT]
+> Keep these values handy for route tests and authorizer setup:
 
 | Parameter | Console Location | Value |
 | --- | --- | --- |
@@ -469,7 +471,8 @@ Create the user pool first with MFA off. Cognito requires SMS configuration when
 
 Console path: **Amazon Cognito** -> **User pools** -> **Create user pool**. Use email sign-in and the password policy shown below. Leave MFA off during initial pool creation, then enable software-token MFA after the pool exists.
 
-Keep these values handy for app client setup, authorizer setup, and CLI authentication:
+> [!IMPORTANT]
+> Keep these values handy for app client setup, authorizer setup, and CLI authentication:
 
 | Parameter | Console Location | Value |
 | --- | --- | --- |
@@ -540,7 +543,8 @@ Console path: open the user pool -> **App clients** -> **Create app client**. En
 > [!NOTE]
 > The protected HTTP API route uses the access token. A 15-minute access token makes expiration behavior easy to observe without waiting through a long default session.
 
-Keep these values handy for `SECRET_HASH`, manual authentication, and the export-driven run:
+> [!IMPORTANT]
+> Keep these values handy for `SECRET_HASH`, manual authentication, and the export-driven run:
 
 | Parameter | Console Location | Value |
 | --- | --- | --- |
@@ -598,7 +602,8 @@ Create `chewbacca` and suppress the welcome email:
 
 Console path: open the user pool -> **Users** -> **Create user**. Use the username, email, and password values from the export block.
 
-Keep these values handy for the manual authentication run:
+> [!IMPORTANT]
+> Keep these values handy for the manual authentication run:
 
 | Parameter | Console Location | Value |
 | --- | --- | --- |
@@ -1007,7 +1012,8 @@ Create the HTTP API JWT authorizer:
 
 Console path: open the HTTP API -> **Authorization** -> **Manage authorizers** -> **Create**. Use a JWT authorizer with issuer `COGNITO_ISSUER`, audience `CLIENT_ID`, and identity source `$request.header.Authorization`. Attach it to `GET /jedi` and `GET /sith`.
 
-Keep these values handy for validation and troubleshooting:
+> [!IMPORTANT]
+> Keep these values handy for validation and troubleshooting:
 
 | Parameter | Console Location | Value |
 | --- | --- | --- |

@@ -219,7 +219,8 @@ Create the Jedi Python Lambda:
 
 Console path: **Lambda** -> **Create function** -> **Author from scratch**. Use the function names, runtimes, handlers, and ZIP files shown below.
 
-Keep these values handy for API Gateway integration:
+> [!IMPORTANT]
+> Keep these values handy for API Gateway integration:
 
 | Parameter | Console Location | Value |
 | --- | --- | --- |
@@ -328,7 +329,8 @@ Validation:
 
 Console path: **API Gateway** -> **Create API** -> **REST API** -> **Build** -> **New API** -> API name from `API_NAME` -> endpoint type **Regional**.
 
-Keep these values handy for resources, methods, deployment, and teardown:
+> [!IMPORTANT]
+> Keep these values handy for resources, methods, deployment, and teardown:
 
 | Parameter | Console Location | Value |
 | --- | --- | --- |
@@ -392,7 +394,8 @@ Create public `GET` methods first so you can prove the API and Lambda routing wo
 
 In the console, create `/jedi` and `/sith` resources, add `GET` methods, use Lambda proxy integration, select the matching Lambda function, and deploy to the `prod` stage.
 
-Keep these values handy for method authorization and route testing:
+> [!IMPORTANT]
+> Keep these values handy for method authorization and route testing:
 
 | Parameter | Console Location | Value |
 | --- | --- | --- |
@@ -507,7 +510,8 @@ Create the user pool first with MFA off. Cognito requires SMS configuration when
 
 Console path: **Amazon Cognito** -> **User pools** -> **Create user pool**. Use email sign-in and the password policy shown below. Leave MFA off during initial pool creation, then enable software-token MFA after the pool exists.
 
-Keep these values handy for app client setup, authorizer setup, and CLI authentication:
+> [!IMPORTANT]
+> Keep these values handy for app client setup, authorizer setup, and CLI authentication:
 
 | Parameter | Console Location | Value |
 | --- | --- | --- |
@@ -581,7 +585,8 @@ Console path: open the user pool -> **App clients** -> **Create app client**. En
 > [!NOTE]
 > The barebones REST route test uses the ID token when no method-level OAuth scopes are configured. A 15-minute ID token makes expiration behavior easy to observe without waiting through a long default session.
 
-Keep these values handy for `SECRET_HASH`, manual authentication, and the export-driven run:
+> [!IMPORTANT]
+> Keep these values handy for `SECRET_HASH`, manual authentication, and the export-driven run:
 
 | Parameter | Console Location | Value |
 | --- | --- | --- |
@@ -639,7 +644,8 @@ Create `chewbacca` and suppress the welcome email:
 
 Console path: open the user pool -> **Users** -> **Create user**. Use the username, email, and password values from the export block.
 
-Keep these values handy for the manual authentication run:
+> [!IMPORTANT]
+> Keep these values handy for the manual authentication run:
 
 | Parameter | Console Location | Value |
 | --- | --- | --- |
@@ -1049,7 +1055,8 @@ Authorization: Bearer $ID_TOKEN
 
 Console path: open the REST API -> **Authorizers** -> **Create authorizer**. Use a Cognito User Pool authorizer with token source `Authorization`, then attach it to the `GET /jedi` and `GET /sith` methods.
 
-Keep these values handy for validation and troubleshooting:
+> [!IMPORTANT]
+> Keep these values handy for validation and troubleshooting:
 
 | Parameter | Console Location | Value |
 | --- | --- | --- |
