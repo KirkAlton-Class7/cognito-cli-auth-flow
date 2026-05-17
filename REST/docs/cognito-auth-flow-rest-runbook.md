@@ -219,6 +219,16 @@ Create the Jedi Python Lambda:
 
 Console path: **Lambda** -> **Create function** -> **Author from scratch**. Use the function names, runtimes, handlers, and ZIP files shown below.
 
+Keep these values handy for API Gateway integration:
+
+| Value | Console source | Lab value |
+| --- | --- | --- |
+| Jedi function name | Lambda function overview | `chewbacca-auth-rest-jedi-python` |
+| Jedi function ARN | Lambda function overview -> **Function ARN** | `<JEDI_FUNCTION_ARN>` |
+| Sith function name | Lambda function overview | `chewbacca-auth-rest-sith-node` |
+| Sith function ARN | Lambda function overview -> **Function ARN** | `<SITH_FUNCTION_ARN>` |
+| Lambda execution role | Lambda function configuration -> **Permissions** | `chewbacca-auth-rest-lambda-basic-role` |
+
 Equivalent CLI reference:
 
 ```bash
@@ -318,6 +328,15 @@ Validation:
 
 Console path: **API Gateway** -> **Create API** -> **REST API** -> **Build** -> **New API** -> API name from `API_NAME` -> endpoint type **Regional**.
 
+Keep these values handy for resources, methods, deployment, and teardown:
+
+| Value | Console source | Lab value |
+| --- | --- | --- |
+| REST API name | API Gateway REST API details | `chewbacca-auth-rest-api` |
+| REST API ID | API Gateway REST API details | `<REST_API_ID>` |
+| Root resource ID | API Gateway resources view or CLI lookup | `<ROOT_RESOURCE_ID>` |
+| Endpoint type | API settings | `Regional` |
+
 Equivalent CLI reference:
 
 ```bash
@@ -372,6 +391,17 @@ echo "$SITH_RESOURCE_ID"
 Create public `GET` methods first so you can prove the API and Lambda routing work before adding Cognito.
 
 In the console, create `/jedi` and `/sith` resources, add `GET` methods, use Lambda proxy integration, select the matching Lambda function, and deploy to the `prod` stage.
+
+Keep these values handy for method authorization and route testing:
+
+| Value | Console source | Lab value |
+| --- | --- | --- |
+| Jedi resource path | API Gateway resources | `/jedi` |
+| Jedi resource ID | API Gateway resources or CLI lookup | `<JEDI_RESOURCE_ID>` |
+| Sith resource path | API Gateway resources | `/sith` |
+| Sith resource ID | API Gateway resources or CLI lookup | `<SITH_RESOURCE_ID>` |
+| Deployment stage | API Gateway stages | `prod` |
+| Invoke URL / endpoint | Stage details | `<API_ENDPOINT>` |
 
 Equivalent CLI reference:
 
@@ -477,6 +507,16 @@ Create the user pool first with MFA off. Cognito requires SMS configuration when
 
 Console path: **Amazon Cognito** -> **User pools** -> **Create user pool**. Use email sign-in and the password policy shown below. Leave MFA off during initial pool creation, then enable software-token MFA after the pool exists.
 
+Keep these values handy for app client setup, authorizer setup, and CLI authentication:
+
+| Value | Console source | Lab value |
+| --- | --- | --- |
+| User pool name | Cognito user pool details | `chewbacca-auth-rest-users` |
+| User pool ID | Cognito user pool details | `<USER_POOL_ID>` |
+| User pool ARN | Cognito user pool details | `<USER_POOL_ARN>` |
+| Issuer URL | `https://cognito-idp.<REGION>.amazonaws.com/<USER_POOL_ID>` | `<COGNITO_ISSUER>` |
+| Region | AWS console region selector | `us-west-2` |
+
 ### 9.1 Create The User Pool
 
 Equivalent CLI reference:
@@ -541,6 +581,23 @@ Console path: open the user pool -> **App clients** -> **Create app client**. En
 > [!NOTE]
 > The barebones REST route test uses the ID token when no method-level OAuth scopes are configured. A 15-minute ID token makes expiration behavior easy to observe without waiting through a long default session.
 
+Keep these values handy for `SECRET_HASH`, manual authentication, and the export-driven run:
+
+| Value | Console source | Lab value |
+| --- | --- | --- |
+| App client name | Cognito app client details | `chewbacca-auth-rest-cli-client` |
+| Client ID | Cognito app client details | `<CLIENT_ID>` |
+| Client secret | Cognito app client details -> **Show client secret** | `<CLIENT_SECRET>` |
+| Enabled auth flows | App client authentication flows | `ALLOW_USER_AUTH`, `ALLOW_USER_PASSWORD_AUTH`, `ALLOW_REFRESH_TOKEN_AUTH` |
+
+Token settings to verify:
+
+| Token setting | Lab value |
+| --- | --- |
+| Access token validity | `15 minutes` |
+| ID token validity | `15 minutes` |
+| Refresh token validity | `1 day` |
+
 Equivalent CLI reference:
 
 ```bash
@@ -581,6 +638,15 @@ echo "$CLIENT_JSON" | jq '{AccessTokenValidity,IdTokenValidity,RefreshTokenValid
 Create `chewbacca` and suppress the welcome email:
 
 Console path: open the user pool -> **Users** -> **Create user**. Use the username, email, and password values from the export block.
+
+Keep these values handy for the manual authentication run:
+
+| Value | Console source | Lab value |
+| --- | --- | --- |
+| Username | Cognito user details | `chewbacca` |
+| Email | Cognito user attributes | `chewbacca@example.com` |
+| Permanent password | Password set during user creation/reset | `Wookiee#2026!` |
+| Email verified | Cognito user attributes | `true` |
 
 Equivalent CLI reference:
 
@@ -982,6 +1048,16 @@ Authorization: Bearer $ID_TOKEN
 ## 15. Add the REST API Cognito Authorizer
 
 Console path: open the REST API -> **Authorizers** -> **Create authorizer**. Use a Cognito User Pool authorizer with token source `Authorization`, then attach it to the `GET /jedi` and `GET /sith` methods.
+
+Keep these values handy for validation and troubleshooting:
+
+| Value | Console source | Lab value |
+| --- | --- | --- |
+| Authorizer name | REST API authorizer details | `chewbacca-auth-rest-cognito-authorizer` |
+| Authorizer ID | REST API authorizer details | `<COGNITO_AUTHORIZER_ID>` |
+| Cognito provider ARN | Cognito user pool details | `<USER_POOL_ARN>` |
+| Token source | Authorizer token source | `Authorization` |
+| Protected methods | REST API resources and methods | `GET /jedi`, `GET /sith` |
 
 Equivalent CLI reference:
 

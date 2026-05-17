@@ -219,6 +219,16 @@ Create the Jedi Python Lambda:
 
 Console path: **Lambda** -> **Create function** -> **Author from scratch**. Use the function names, runtimes, handlers, and ZIP files shown below.
 
+Keep these values handy for API Gateway integration:
+
+| Value | Console source | Lab value |
+| --- | --- | --- |
+| Jedi function name | Lambda function overview | `chewbacca-auth-http-jedi-python` |
+| Jedi function ARN | Lambda function overview -> **Function ARN** | `<JEDI_FUNCTION_ARN>` |
+| Sith function name | Lambda function overview | `chewbacca-auth-http-sith-node` |
+| Sith function ARN | Lambda function overview -> **Function ARN** | `<SITH_FUNCTION_ARN>` |
+| Lambda execution role | Lambda function configuration -> **Permissions** | `chewbacca-auth-http-lambda-basic-role` |
+
 Equivalent CLI reference:
 
 ```bash
@@ -317,6 +327,15 @@ Validation:
 ## 6. Create the HTTP API
 
 Console path: **API Gateway** -> **Create API** -> **HTTP API** -> API name from `API_NAME`.
+
+Keep these values handy for route tests and authorizer setup:
+
+| Value | Console source | Lab value |
+| --- | --- | --- |
+| API name | API Gateway HTTP API details | `chewbacca-auth-http-api` |
+| API ID | API Gateway HTTP API details | `<API_ID>` |
+| Invoke URL / endpoint | API Gateway stage details | `<API_ENDPOINT>` |
+| Stage name | API Gateway stages | `prod` |
 
 Equivalent CLI reference:
 
@@ -450,6 +469,15 @@ Create the user pool first with MFA off. Cognito requires SMS configuration when
 
 Console path: **Amazon Cognito** -> **User pools** -> **Create user pool**. Use email sign-in and the password policy shown below. Leave MFA off during initial pool creation, then enable software-token MFA after the pool exists.
 
+Keep these values handy for app client setup, authorizer setup, and CLI authentication:
+
+| Value | Console source | Lab value |
+| --- | --- | --- |
+| User pool name | Cognito user pool details | `chewbacca-auth-http-users` |
+| User pool ID | Cognito user pool details | `<USER_POOL_ID>` |
+| Issuer URL | `https://cognito-idp.<REGION>.amazonaws.com/<USER_POOL_ID>` | `<COGNITO_ISSUER>` |
+| Region | AWS console region selector | `us-west-2` |
+
 ### 9.1 Create The User Pool
 
 Equivalent CLI reference:
@@ -512,6 +540,23 @@ Console path: open the user pool -> **App clients** -> **Create app client**. En
 > [!NOTE]
 > The protected HTTP API route uses the access token. A 15-minute access token makes expiration behavior easy to observe without waiting through a long default session.
 
+Keep these values handy for `SECRET_HASH`, manual authentication, and the export-driven run:
+
+| Value | Console source | Lab value |
+| --- | --- | --- |
+| App client name | Cognito app client details | `chewbacca-auth-http-cli-client` |
+| Client ID | Cognito app client details | `<CLIENT_ID>` |
+| Client secret | Cognito app client details -> **Show client secret** | `<CLIENT_SECRET>` |
+| Enabled auth flows | App client authentication flows | `ALLOW_USER_AUTH`, `ALLOW_USER_PASSWORD_AUTH`, `ALLOW_REFRESH_TOKEN_AUTH` |
+
+Token settings to verify:
+
+| Token setting | Lab value |
+| --- | --- |
+| Access token validity | `15 minutes` |
+| ID token validity | `15 minutes` |
+| Refresh token validity | `1 day` |
+
 Equivalent CLI reference:
 
 ```bash
@@ -552,6 +597,15 @@ echo "$CLIENT_JSON" | jq '{AccessTokenValidity,IdTokenValidity,RefreshTokenValid
 Create `chewbacca` and suppress the welcome email:
 
 Console path: open the user pool -> **Users** -> **Create user**. Use the username, email, and password values from the export block.
+
+Keep these values handy for the manual authentication run:
+
+| Value | Console source | Lab value |
+| --- | --- | --- |
+| Username | Cognito user details | `chewbacca` |
+| Email | Cognito user attributes | `chewbacca@example.com` |
+| Permanent password | Password set during user creation/reset | `Wookiee#2026!` |
+| Email verified | Cognito user attributes | `true` |
 
 Equivalent CLI reference:
 
@@ -952,6 +1006,16 @@ Authorization: Bearer $ACCESS_TOKEN
 Create the HTTP API JWT authorizer:
 
 Console path: open the HTTP API -> **Authorization** -> **Manage authorizers** -> **Create**. Use a JWT authorizer with issuer `COGNITO_ISSUER`, audience `CLIENT_ID`, and identity source `$request.header.Authorization`. Attach it to `GET /jedi` and `GET /sith`.
+
+Keep these values handy for validation and troubleshooting:
+
+| Value | Console source | Lab value |
+| --- | --- | --- |
+| Authorizer name | HTTP API authorizer details | `chewbacca-auth-http-cognito-jwt` |
+| Authorizer ID | HTTP API authorizer details | `<COGNITO_AUTHORIZER_ID>` |
+| Issuer | Cognito user pool issuer URL | `<COGNITO_ISSUER>` |
+| Audience | Cognito app client ID | `<CLIENT_ID>` |
+| Identity source | Authorizer identity source | `$request.header.Authorization` |
 
 Equivalent CLI reference:
 
