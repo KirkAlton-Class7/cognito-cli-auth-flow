@@ -9,7 +9,7 @@ This repo is intentionally smaller than Tawny Port. It isolates the authenticati
 The lab demonstrates the same Cognito identity flow across two API Gateway implementations:
 
 * The AWS Console is used to create the user pool, app client, Lambda functions, API Gateway routes, and authorizers.
-* The CLI walks through `USER_AUTH`, `SELECT_CHALLENGE`, `PASSWORD`, `SOFTWARE_TOKEN_MFA`, token export, and route testing.
+* The CLI walks through `USER_AUTH`, `SELECT_CHALLENGE`, `PASSWORD`, `SOFTWARE_TOKEN_MFA`, manual token inspection, exported token reuse, and route testing.
 * API Gateway protects simple Jedi and Sith Lambda routes after the console infrastructure is in place.
 * Lambda only runs after API Gateway accepts the Cognito token.
 * CloudWatch proves whether the request actually reached the function.
@@ -21,6 +21,9 @@ Start with the API Gateway style you want to practice:
 
 > [!IMPORTANT]
 > Use separate project names when running both versions. The runbooks already do this with `chewbacca-auth-http` and `chewbacca-auth-rest`, so both labs can exist in the same AWS account and region.
+
+> [!NOTE]
+> The commands assume the repo lives at `"$HOME/cognito-cli-auth-flow"`. If you clone it somewhere else, set `LAB_REPO` to that path before packaging Lambda code or running helper scripts.
 
 ## Platform Overview
 
@@ -73,17 +76,24 @@ Cognito user pool and app client
 API Gateway API, routes/resources, integrations, stages, and authorizers
 ```
 
-Use the **CLI** for the authentication workflow and validation:
+Use the **CLI** for the authentication workflow and validation. Run the auth flow more than one way on purpose:
 
 ```text
-SECRET_HASH
-USER_AUTH
-SELECT_CHALLENGE
-PASSWORD
-SOFTWARE_TOKEN_MFA
-JWT export
-curl route tests
+Manual pass:
+  read each Cognito response
+  copy Session values by hand
+  paste MFA codes by hand
+  observe where tokens appear
+
+Export pass:
+  export generated IDs
+  generate SECRET_HASH
+  export Session and JWT values
+  repeat curl route tests quickly
 ```
+
+> [!IMPORTANT]
+> Do the manual CLI pass first. Copying the `Session` value from `SELECT_CHALLENGE` into the next command, then copying the new `Session` into the MFA command, is the part that makes Cognito's challenge flow click. The export-based path is included after that so you can repeat the lab without turning every run into archaeology.
 
 ## Repository Structure
 

@@ -3,7 +3,12 @@
 REST API implementation of the Chewbacca Cognito CLI auth-flow lab.<br>
 View the HTTPS version [here](../HTTPS/README.md) if you prefer that implementation.<br><br>
 
-This version uses API Gateway **REST API** resources and methods with a native Cognito User Pool authorizer. Build the infrastructure in the AWS Console, then use the CLI for the Cognito challenge flow, token export, and protected route tests.
+This version uses API Gateway **REST API** resources and methods with a native Cognito User Pool authorizer. Build the infrastructure in the AWS Console, then use the CLI for the Cognito challenge flow, token handling, and protected route tests.
+
+The runbook intentionally includes two CLI passes:
+
+* Manual-first pass: read each Cognito JSON response, copy `Session` values by hand, and paste the MFA code yourself.
+* Export-driven pass: export sessions and tokens so you can repeat the flow quickly after you understand it.
 
 > [!IMPORTANT]
 > This folder documents the REST API implementation. REST APIs require an explicit deployment after method or authorizer changes.
@@ -32,7 +37,7 @@ Chewbacca CLI
 
 ## Get Started
 
-Use the [REST runbook](docs/cognito-auth-flow-rest-runbook.md) to build the infrastructure in the AWS Console and validate the authentication flow from the CLI:
+Use the [REST runbook](docs/cognito-auth-flow-rest-runbook.md) to build the infrastructure in the AWS Console and validate the authentication flow from the CLI. Work from `"$HOME/cognito-cli-auth-flow"` when packaging Lambda code or running helper scripts:
 
 * Cognito user pool and app client
 * Chewbacca test user with software token MFA
