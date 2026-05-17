@@ -127,7 +127,7 @@ The Lambda and helper script files are shared across both implementations:
 
 ## Learning Outcome
 
-You are finished when you can explain this chain without looking:
+You are finished when you can explain this chain confidently:
 
 ```text
 SECRET_HASH proves the app client secret
