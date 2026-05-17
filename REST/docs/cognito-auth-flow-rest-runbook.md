@@ -921,6 +921,43 @@ For the no-scope REST API route test, copy `<ID_TOKEN>`.
 
 After completing the manual run, repeat the same authentication flow with shell exports. This pass is for repeatability and easier test reuse.
 
+> [!IMPORTANT]
+> If you are continuing in the same terminal session from the manual run and your variables are still set, continue directly to **13.1 Export `SECRET_HASH`**. If you opened a new terminal, skipped the manual run, or are returning later, collect the values below from the AWS Console and export them before continuing.
+
+| Parameter | Console Location | Value |
+| --- | --- | --- |
+| Lab repo path | Local terminal | `<PATH_TO_COGNITO_CLI_AUTH_FLOW_REPO>` |
+| AWS region | AWS Console region selector | `us-west-2` |
+| App client ID | Cognito user pool -> App clients -> `<APP_CLIENT_NAME>` | `<CLIENT_ID>` |
+| App client secret | Cognito user pool -> App clients -> `<APP_CLIENT_NAME>` -> show client secret | `<CLIENT_SECRET>` |
+| Test username | Cognito user pool -> Users -> user details | `chewbacca` |
+| Test password | Password set during user creation/reset | `<USER_PASSWORD>` |
+
+Export the values:
+
+```bash
+cd "<PATH_TO_COGNITO_CLI_AUTH_FLOW_REPO>"
+export LAB_REPO="$(pwd)"
+export AWS_REGION="us-west-2"
+export CLIENT_ID="<CLIENT_ID>"
+export CLIENT_SECRET="<CLIENT_SECRET>"
+export TEST_USERNAME="chewbacca"
+export TEST_PASSWORD="<USER_PASSWORD>"
+```
+
+Validation:
+
+```bash
+echo "$LAB_REPO"
+echo "$AWS_REGION"
+echo "$CLIENT_ID"
+echo "${CLIENT_SECRET:0:8}..."
+echo "$TEST_USERNAME"
+```
+
+> [!CAUTION]
+> Do not print the full `CLIENT_SECRET` in shared terminals, screenshots, commits, or notes. Show only a short prefix when validating that the variable is loaded.
+
 ### 13.1 Export `SECRET_HASH`
 
 This is the same client-secret proof from the manual pass, stored in a shell variable so the remaining commands can be repeated quickly without recopying the hash.
