@@ -769,7 +769,7 @@ cd "$LAB_REPO"
 Example:
 
 ```bash
-export LAB_REPO="/Users/kirk/Codex/sandbox/cognito-cli-auth-flow"
+export LAB_REPO="/Users/kirk/cognito-cli-auth-flow"
 cd "$LAB_REPO"
 ```
 
