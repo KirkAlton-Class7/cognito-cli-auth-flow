@@ -281,6 +281,13 @@ aws lambda invoke \
 jq . /tmp/chewbacca-rest-jedi-response.json
 ```
 
+Expected output:
+
+```text
+statusCode: 200
+body contains: The Python Jedi Council accepts your request.
+```
+
 Invoke the Sith Node.js function:
 
 ```bash
@@ -292,6 +299,13 @@ aws lambda invoke \
   --region "$AWS_REGION"
 
 jq . /tmp/chewbacca-rest-sith-response.json
+```
+
+Expected output:
+
+```text
+statusCode: 200
+body contains: THE NODE SITH ROUTE HAS FELT YOUR PRESENCE.
 ```
 
 Validation:
@@ -444,6 +458,13 @@ curl "${API_ENDPOINT}/prod/jedi?name=Chewbacca"
 curl "${API_ENDPOINT}/prod/sith?name=Chewbacca"
 ```
 
+Expected output:
+
+```text
+{"message":"Welcome Chewbacca. The Python Jedi Council accepts your request.",...}
+{"message":"WELCOME CHEWBACCA. THE NODE SITH ROUTE HAS FELT YOUR PRESENCE.",...}
+```
+
 Validation:
 
 - API Gateway reaches both Lambda functions.
@@ -594,151 +615,230 @@ aws cognito-idp admin-get-user \
   --query '{Username:Username,Status:UserStatus,Enabled:Enabled}'
 ```
 
-## 12. Generate the Cognito SECRET_HASH
+## 12. Manual Authentication Run
 
-`SECRET_HASH` proves the request knows the app client secret without sending the raw secret as the challenge answer.
+Run the full authentication flow manually first. Do not use shell variables in this pass. The point is to see the values Cognito returns and move them into the next request yourself.
+
+Use these placeholders in the manual commands:
+
+| Placeholder | Where to get it |
+| --- | --- |
+| `<REGION>` | The lab region, such as `us-west-2` |
+| `<CLIENT_ID>` | Cognito app client ID from Step 10 |
+| `<CLIENT_SECRET>` | Cognito app client secret from Step 10 |
+| `<USER_NAME>` | Test username from Step 11, such as `chewbacca` |
+| `<USER_PASSWORD>` | Permanent password from Step 11 |
+| `<SECRET_HASH>` | Output from the manual `secret_hash.py` command |
+| `<TEMP_ACCESS_TOKEN>` | `AuthenticationResult.AccessToken` from the direct password auth response |
+| `<TOTP_SECRET>` | `SecretCode` from `associate-software-token` |
+| `<MFA_CODE>` | Current six-digit code from your authenticator app |
+| `<SELECT_CHALLENGE_SESSION>` | `Session` from the `SELECT_CHALLENGE` response |
+| `<SOFTWARE_TOKEN_MFA_SESSION>` | `Session` from the `SOFTWARE_TOKEN_MFA` challenge response |
+| `<ID_TOKEN>` | `AuthenticationResult.IdToken` from the final MFA response |
+
+> [!IMPORTANT]
+> Complete this manual run before using the export-driven run. Copying the two different `Session` values by hand is what makes the Cognito challenge sequence visible.
+
+### 12.1 Manual Check: Generate `SECRET_HASH`
 
 ```bash
 cd "$LAB_REPO"
-```
-
-Manual check:
-
-```bash
 python3 shared/scripts/secret_hash.py \
-  "$TEST_USERNAME" \
-  "$CLIENT_ID" \
-  "$CLIENT_SECRET"
+  "<USER_NAME>" \
+  "<CLIENT_ID>" \
+  "<CLIENT_SECRET>"
 ```
 
-Export path:
+Expected output:
+
+```text
+<SECRET_HASH>
+```
+
+Copy that output and use it as `<SECRET_HASH>` in the next manual commands.
+
+### 12.2 Manual Check: Bootstrap TOTP MFA
+
+Authenticate once with direct password auth. MFA is optional at this point, so Cognito should return temporary tokens.
+
+> [!NOTE]
+> Run this bootstrap step only for a fresh test user that has not enrolled an authenticator app yet. If MFA is already enrolled, skip to **12.3 Manual Check: Start `USER_AUTH`**.
 
 ```bash
+aws cognito-idp initiate-auth \
+  --client-id "<CLIENT_ID>" \
+  --auth-flow USER_PASSWORD_AUTH \
+  --auth-parameters USERNAME="<USER_NAME>",PASSWORD="<USER_PASSWORD>",SECRET_HASH="<SECRET_HASH>" \
+  --region "<REGION>" | jq
+```
+
+Expected output:
+
+```json
+{
+  "AuthenticationResult": {
+    "AccessToken": "<TEMP_ACCESS_TOKEN>",
+    "IdToken": "<ID_TOKEN>",
+    "RefreshToken": "<REFRESH_TOKEN>",
+    "TokenType": "Bearer",
+    "ExpiresIn": 900
+  }
+}
+```
+
+Use the temporary access token to request a software-token secret:
+
+```bash
+aws cognito-idp associate-software-token \
+  --access-token "<TEMP_ACCESS_TOKEN>" \
+  --region "<REGION>" | jq
+```
+
+Expected output:
+
+```json
+{
+  "SecretCode": "<TOTP_SECRET>"
+}
+```
+
+Add `<TOTP_SECRET>` to your authenticator app as a manual setup key. Then verify the current six-digit code:
+
+```bash
+aws cognito-idp verify-software-token \
+  --access-token "<TEMP_ACCESS_TOKEN>" \
+  --user-code "<MFA_CODE>" \
+  --friendly-device-name "Chewbacca CLI REST" \
+  --region "<REGION>" | jq
+```
+
+Expected output:
+
+```json
+{
+  "Status": "SUCCESS"
+}
+```
+
+Set software token MFA as preferred:
+
+```bash
+aws cognito-idp set-user-mfa-preference \
+  --access-token "<TEMP_ACCESS_TOKEN>" \
+  --software-token-mfa-settings Enabled=true,PreferredMfa=true \
+  --region "<REGION>"
+```
+
+Expected output:
+
+```text
+No output means the preference update succeeded.
+```
+
+> [!IMPORTANT]
+> `<TEMP_ACCESS_TOKEN>` is only for MFA enrollment. If this token expires during setup, run the direct password auth command again and use the new access token.
+
+### 12.3 Manual Check: Start `USER_AUTH`
+
+```bash
+aws cognito-idp initiate-auth \
+  --client-id "<CLIENT_ID>" \
+  --auth-flow USER_AUTH \
+  --auth-parameters USERNAME="<USER_NAME>",SECRET_HASH="<SECRET_HASH>" \
+  --region "<REGION>" | jq
+```
+
+Expected output:
+
+```json
+{
+  "ChallengeName": "SELECT_CHALLENGE",
+  "AvailableChallenges": [
+    "PASSWORD",
+    "PASSWORD_SRP"
+  ],
+  "Session": "<SELECT_CHALLENGE_SESSION>"
+}
+```
+
+Copy `<SELECT_CHALLENGE_SESSION>` into the next command.
+
+### 12.4 Manual Check: Choose `PASSWORD`
+
+```bash
+aws cognito-idp respond-to-auth-challenge \
+  --client-id "<CLIENT_ID>" \
+  --challenge-name SELECT_CHALLENGE \
+  --challenge-responses USERNAME="<USER_NAME>",ANSWER="PASSWORD",PASSWORD="<USER_PASSWORD>",SECRET_HASH="<SECRET_HASH>" \
+  --session "<SELECT_CHALLENGE_SESSION>" \
+  --region "<REGION>" | jq
+```
+
+Expected output:
+
+```json
+{
+  "ChallengeName": "SOFTWARE_TOKEN_MFA",
+  "Session": "<SOFTWARE_TOKEN_MFA_SESSION>"
+}
+```
+
+Copy `<SOFTWARE_TOKEN_MFA_SESSION>` into the next command.
+
+### 12.5 Manual Check: Respond To `SOFTWARE_TOKEN_MFA`
+
+```bash
+aws cognito-idp respond-to-auth-challenge \
+  --client-id "<CLIENT_ID>" \
+  --challenge-name SOFTWARE_TOKEN_MFA \
+  --challenge-responses USERNAME="<USER_NAME>",SOFTWARE_TOKEN_MFA_CODE="<MFA_CODE>",SECRET_HASH="<SECRET_HASH>" \
+  --session "<SOFTWARE_TOKEN_MFA_SESSION>" \
+  --region "<REGION>" | jq
+```
+
+Expected output:
+
+```json
+{
+  "AuthenticationResult": {
+    "AccessToken": "<ACCESS_TOKEN>",
+    "IdToken": "<ID_TOKEN>",
+    "RefreshToken": "<REFRESH_TOKEN>",
+    "TokenType": "Bearer",
+    "ExpiresIn": 900
+  }
+}
+```
+
+For the no-scope REST API route test, copy `<ID_TOKEN>`.
+
+> [!WARNING]
+> Cognito challenge sessions are short-lived. If too much time passes between manual commands, restart from **12.3 Manual Check: Start `USER_AUTH`**.
+
+## 13. Export-Driven Authentication Run
+
+After completing the manual run, repeat the same authentication flow with shell exports. This pass is for speed and repeatability.
+
+### 13.1 Export `SECRET_HASH`
+
+```bash
+cd "$LAB_REPO"
+
 export SECRET_HASH=$(python3 shared/scripts/secret_hash.py \
   "$TEST_USERNAME" \
   "$CLIENT_ID" \
   "$CLIENT_SECRET")
-```
 
-Validation:
-
-```bash
 echo "${SECRET_HASH:0:20}"
 ```
 
-## 13. Bootstrap Chewbacca TOTP MFA
+Expected output:
 
-First authenticate with the direct password flow. MFA is optional right now, so Cognito should return tokens.
-
-```bash
-export INITIAL_AUTH_RESPONSE=$(aws cognito-idp initiate-auth \
-  --client-id "$CLIENT_ID" \
-  --auth-flow USER_PASSWORD_AUTH \
-  --auth-parameters USERNAME="$TEST_USERNAME",PASSWORD="$TEST_PASSWORD",SECRET_HASH="$SECRET_HASH" \
-  --region "$AWS_REGION")
+```text
+<first-20-characters-of-secret-hash>
 ```
 
-Export the temporary access token:
-
-```bash
-export ACCESS_TOKEN=$(echo "$INITIAL_AUTH_RESPONSE" | jq -r '.AuthenticationResult.AccessToken')
-```
-
-> [!IMPORTANT]
-> This temporary access token is only used to enroll MFA. If `associate-software-token`, `verify-software-token`, or `set-user-mfa-preference` fails because the token expired, re-run the `USER_PASSWORD_AUTH` command in this section and export a fresh `ACCESS_TOKEN`.
-
-Ask Cognito for a software token secret:
-
-```bash
-export TOTP_SETUP_RESPONSE=$(aws cognito-idp associate-software-token \
-  --access-token "$ACCESS_TOKEN" \
-  --region "$AWS_REGION")
-```
-
-Print the secret code:
-
-```bash
-export TOTP_SECRET=$(echo "$TOTP_SETUP_RESPONSE" | jq -r '.SecretCode')
-echo "$TOTP_SECRET"
-```
-
-Add that secret to an authenticator app as a manual setup key.
-
-Then export the current six-digit code:
-
-```bash
-export TOTP_CODE="123456"
-```
-
-Verify the software token:
-
-```bash
-aws cognito-idp verify-software-token \
-  --access-token "$ACCESS_TOKEN" \
-  --user-code "$TOTP_CODE" \
-  --friendly-device-name "Chewbacca CLI REST" \
-  --region "$AWS_REGION"
-```
-
-Set software token MFA as the preferred MFA method:
-
-```bash
-aws cognito-idp set-user-mfa-preference \
-  --access-token "$ACCESS_TOKEN" \
-  --software-token-mfa-settings Enabled=true,PreferredMfa=true \
-  --region "$AWS_REGION"
-```
-
-Validation:
-
-- The authenticator app is enrolled.
-- `chewbacca` now has software token MFA enabled.
-- Future password auth should return `SOFTWARE_TOKEN_MFA` before issuing tokens.
-
-## 14. Run the USER_AUTH Negotiated Flow
-
-`USER_AUTH` starts with negotiation. Cognito asks which challenge you want to use.
-
-### 14.1 Manual-First Pass
-
-Run the first pass slowly. Do not export the response yet. Read the JSON, copy the `Session` value, and paste it into the next command.
-
-```bash
-aws cognito-idp initiate-auth \
-  --client-id "$CLIENT_ID" \
-  --auth-flow USER_AUTH \
-  --auth-parameters USERNAME="$TEST_USERNAME",SECRET_HASH="$SECRET_HASH" \
-  --region "$AWS_REGION" | jq
-```
-
-Copy the `Session` value from the `SELECT_CHALLENGE` response.
-
-```bash
-aws cognito-idp respond-to-auth-challenge \
-  --client-id "$CLIENT_ID" \
-  --challenge-name SELECT_CHALLENGE \
-  --challenge-responses USERNAME="$TEST_USERNAME",ANSWER="PASSWORD",PASSWORD="$TEST_PASSWORD",SECRET_HASH="$SECRET_HASH" \
-  --session "PASTE_SELECT_CHALLENGE_SESSION_HERE" \
-  --region "$AWS_REGION" | jq
-```
-
-Copy the new `Session` value from the `SOFTWARE_TOKEN_MFA` response. Then paste a fresh authenticator code and the new session into the MFA response.
-
-```bash
-aws cognito-idp respond-to-auth-challenge \
-  --client-id "$CLIENT_ID" \
-  --challenge-name SOFTWARE_TOKEN_MFA \
-  --challenge-responses USERNAME="$TEST_USERNAME",SOFTWARE_TOKEN_MFA_CODE="PASTE_CURRENT_MFA_CODE",SECRET_HASH="$SECRET_HASH" \
-  --session "PASTE_SOFTWARE_TOKEN_MFA_SESSION_HERE" \
-  --region "$AWS_REGION" | jq
-```
-
-The final response contains `AccessToken`, `IdToken`, and `RefreshToken`. For the no-scope REST API route test, copy the `IdToken`.
-
-> [!TIP]
-> This manual pass is the teaching pass. You should see Cognito issue one session for challenge selection, then a different session for MFA. After you see that flow, use the export-driven commands below to repeat it faster.
-
-### 14.2 Export-Driven Pass
+### 13.2 Export Run: Start `USER_AUTH`
 
 ```bash
 export AUTH_RESPONSE=$(aws cognito-idp initiate-auth \
@@ -746,15 +846,11 @@ export AUTH_RESPONSE=$(aws cognito-idp initiate-auth \
   --auth-flow USER_AUTH \
   --auth-parameters USERNAME="$TEST_USERNAME",SECRET_HASH="$SECRET_HASH" \
   --region "$AWS_REGION")
-```
 
-Inspect the response:
-
-```bash
 echo "$AUTH_RESPONSE" | jq
 ```
 
-Expected shape:
+Expected output:
 
 ```json
 {
@@ -774,12 +870,13 @@ export SESSION=$(echo "$AUTH_RESPONSE" | jq -r '.Session')
 echo "${SESSION:0:20}"
 ```
 
-> [!WARNING]
-> Cognito challenge sessions are short-lived. If you wait too long between `initiate-auth`, `SELECT_CHALLENGE`, and `SOFTWARE_TOKEN_MFA`, the session can expire. Start again from **Step 14** and replace `SESSION` with the new value.
+Expected output:
 
-## 15. Choose the PASSWORD Challenge
+```text
+<first-20-characters-of-session>
+```
 
-This is the `choose challenge` step.
+### 13.3 Export Run: Choose `PASSWORD`
 
 ```bash
 export PASSWORD_CHALLENGE_RESPONSE=$(aws cognito-idp respond-to-auth-challenge \
@@ -788,15 +885,11 @@ export PASSWORD_CHALLENGE_RESPONSE=$(aws cognito-idp respond-to-auth-challenge \
   --challenge-responses USERNAME="$TEST_USERNAME",ANSWER="PASSWORD",PASSWORD="$TEST_PASSWORD",SECRET_HASH="$SECRET_HASH" \
   --session "$SESSION" \
   --region "$AWS_REGION")
-```
 
-Inspect the response:
-
-```bash
 echo "$PASSWORD_CHALLENGE_RESPONSE" | jq
 ```
 
-Expected shape:
+Expected output:
 
 ```json
 {
@@ -811,7 +904,7 @@ Export the new session:
 export SESSION=$(echo "$PASSWORD_CHALLENGE_RESPONSE" | jq -r '.Session')
 ```
 
-## 16. Respond to the SOFTWARE_TOKEN_MFA Challenge
+### 13.4 Export Run: Respond To `SOFTWARE_TOKEN_MFA`
 
 Get a fresh code from the authenticator app:
 
@@ -828,6 +921,22 @@ export MFA_RESPONSE=$(aws cognito-idp respond-to-auth-challenge \
   --challenge-responses USERNAME="$TEST_USERNAME",SOFTWARE_TOKEN_MFA_CODE="$TOTP_CODE",SECRET_HASH="$SECRET_HASH" \
   --session "$SESSION" \
   --region "$AWS_REGION")
+
+echo "$MFA_RESPONSE" | jq
+```
+
+Expected output:
+
+```json
+{
+  "AuthenticationResult": {
+    "AccessToken": "...",
+    "IdToken": "...",
+    "RefreshToken": "...",
+    "TokenType": "Bearer",
+    "ExpiresIn": 900
+  }
+}
 ```
 
 Export tokens:
@@ -836,20 +945,24 @@ Export tokens:
 export ACCESS_TOKEN=$(echo "$MFA_RESPONSE" | jq -r '.AuthenticationResult.AccessToken')
 export ID_TOKEN=$(echo "$MFA_RESPONSE" | jq -r '.AuthenticationResult.IdToken')
 export REFRESH_TOKEN=$(echo "$MFA_RESPONSE" | jq -r '.AuthenticationResult.RefreshToken')
-```
 
-Validation:
-
-```bash
 echo "${ACCESS_TOKEN:0:24}"
 echo "${ID_TOKEN:0:24}"
 echo "${REFRESH_TOKEN:0:24}"
 ```
 
-> [!IMPORTANT]
-> ID tokens and access tokens expire. If API Gateway later returns `{"message":"The incoming token has expired"}` or a `401`, the route and Lambda may still be correct. Re-run the auth flow, export a fresh `ID_TOKEN`, and retry the protected route.
+Expected output:
 
-## 17. Token Use
+```text
+<first-24-characters-of-access-token>
+<first-24-characters-of-id-token>
+<first-24-characters-of-refresh-token>
+```
+
+> [!IMPORTANT]
+> ID tokens expire after 15 minutes in this lab. If API Gateway later returns `{"message":"The incoming token has expired"}` or a `401`, rerun the export-driven authentication flow and retry with a fresh `ID_TOKEN`.
+
+## 14. Token Use
 
 | Token | What it represents | Use in this lab |
 | --- | --- | --- |
@@ -866,7 +979,7 @@ Authorization: Bearer $ID_TOKEN
 > [!NOTE]
 > REST API Cognito authorizers can validate Cognito user-pool tokens directly. With no authorization scopes configured, API Gateway treats the supplied token as an identity token. If you later configure method-level authorization scopes, use the access token and make sure the requested token includes the required scopes.
 
-## 18. Add the REST API Cognito Authorizer
+## 15. Add the REST API Cognito Authorizer
 
 Console path: open the REST API -> **Authorizers** -> **Create authorizer**. Use a Cognito User Pool authorizer with token source `Authorization`, then attach it to the `GET /jedi` and `GET /sith` methods.
 
@@ -925,7 +1038,7 @@ aws apigateway get-authorizer \
   --region "$AWS_REGION"
 ```
 
-## 19. Test Protected REST API Routes
+## 16. Test Protected REST API Routes
 
 Test without a token:
 
@@ -939,7 +1052,22 @@ Expected:
 HTTP/2 401
 ```
 
-Test the Jedi route with the Cognito ID token:
+Manual Check: test the Jedi route with the ID token copied from **12.5 Manual Check: Respond To `SOFTWARE_TOKEN_MFA`**. Get `<API_ENDPOINT>` from the REST API invoke URL.
+
+```bash
+curl -i \
+  -H "Authorization: Bearer <ID_TOKEN>" \
+  "<API_ENDPOINT>/prod/jedi?name=Chewbacca"
+```
+
+Expected output:
+
+```text
+HTTP/2 200
+...
+```
+
+Export Run: test the Jedi route with the exported ID token:
 
 ```bash
 curl -i \
@@ -947,23 +1075,29 @@ curl -i \
   "${API_ENDPOINT}/prod/jedi?name=Chewbacca"
 ```
 
-> [!NOTE]
-> If the response says `The incoming token has expired`, do not chase the Lambda first. API Gateway rejected the request before invocation. Return to **Step 14**, complete the challenge flow again, and retry with the new `ID_TOKEN`.
+Expected output:
 
-Manual token test:
-
-```bash
-curl -i \
-  -H "Authorization: Bearer PASTE_ID_TOKEN_HERE" \
-  "${API_ENDPOINT}/prod/jedi?name=Chewbacca"
+```text
+HTTP/2 200
+...
 ```
 
-Test the Sith route:
+> [!NOTE]
+> If the response says `The incoming token has expired`, do not chase the Lambda first. API Gateway rejected the request before invocation. Return to **Step 13**, complete the export-driven authentication run again, and retry with the new `ID_TOKEN`.
+
+Export Run: test the Sith route:
 
 ```bash
 curl -i \
   -H "Authorization: Bearer $ID_TOKEN" \
   "${API_ENDPOINT}/prod/sith?name=Chewbacca"
+```
+
+Expected output:
+
+```text
+HTTP/2 200
+...
 ```
 
 Validation:
@@ -972,7 +1106,7 @@ Validation:
 - Valid token returns `200`.
 - Lambda logs appear only when authorization succeeds.
 
-## 20. Direct Flow Shortcut
+## 17. Direct Flow Shortcut
 
 After MFA is enabled, `USER_PASSWORD_AUTH` skips `SELECT_CHALLENGE` and goes straight to password validation, then MFA.
 
@@ -1009,47 +1143,6 @@ This is simpler for CLI testing, but it does not teach the `SELECT_CHALLENGE` ne
 | API returns `500` | Lambda integration or function error | Check CloudWatch logs for the Lambda |
 | Lambda never logs during failed auth | Expected behavior | API Gateway rejects invalid tokens before Lambda runs |
 
-## Cleanup
-
-Delete REST API:
-
-```bash
-aws apigateway delete-rest-api \
-  --rest-api-id "$REST_API_ID" \
-  --region "$AWS_REGION"
-```
-
-Delete Lambda functions:
-
-```bash
-aws lambda delete-function \
-  --function-name "$JEDI_FUNCTION" \
-  --region "$AWS_REGION"
-
-aws lambda delete-function \
-  --function-name "$SITH_FUNCTION" \
-  --region "$AWS_REGION"
-```
-
-Delete Cognito user pool:
-
-```bash
-aws cognito-idp delete-user-pool \
-  --user-pool-id "$USER_POOL_ID" \
-  --region "$AWS_REGION"
-```
-
-Detach and delete the Lambda role:
-
-```bash
-aws iam detach-role-policy \
-  --role-name "$LAMBDA_ROLE_NAME" \
-  --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-
-aws iam delete-role \
-  --role-name "$LAMBDA_ROLE_NAME"
-```
-
 ## Final Check
 
 You have completed the REST lab when you can explain this flow without looking:
@@ -1074,3 +1167,91 @@ CloudWatch proves what actually happened
 * [Cognito MFA](https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-settings-mfa.html)
 * [API Gateway REST API Cognito authorizers](https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-integrate-with-cognito.html)
 * [REST API Lambda proxy integrations](https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html)
+
+## Lab Teardown
+
+Run this section when you are finished with the REST API lab and want to remove the AWS resources created during the walkthrough.
+
+> [!WARNING]
+> These commands delete the lab API, Lambda functions, Cognito user pool, CloudWatch log groups, and IAM role. Confirm you are using the REST API lab variables before running teardown.
+
+Confirm the active lab values:
+
+```bash
+echo "$AWS_REGION"
+echo "$PROJECT_NAME"
+echo "$REST_API_ID"
+echo "$USER_POOL_ID"
+echo "$JEDI_FUNCTION"
+echo "$SITH_FUNCTION"
+echo "$LAMBDA_ROLE_NAME"
+```
+
+Delete the REST API. This removes its resources, methods, integrations, deployments, stages, and Cognito authorizer:
+
+```bash
+aws apigateway delete-rest-api \
+  --rest-api-id "$REST_API_ID" \
+  --region "$AWS_REGION"
+```
+
+Delete the Lambda functions:
+
+```bash
+aws lambda delete-function \
+  --function-name "$JEDI_FUNCTION" \
+  --region "$AWS_REGION"
+
+aws lambda delete-function \
+  --function-name "$SITH_FUNCTION" \
+  --region "$AWS_REGION"
+```
+
+Delete the Lambda CloudWatch log groups:
+
+```bash
+aws logs delete-log-group \
+  --log-group-name "/aws/lambda/${JEDI_FUNCTION}" \
+  --region "$AWS_REGION"
+
+aws logs delete-log-group \
+  --log-group-name "/aws/lambda/${SITH_FUNCTION}" \
+  --region "$AWS_REGION"
+```
+
+Delete the Cognito user pool. This also removes the app client, test user, MFA configuration, and issued-token context for the lab:
+
+```bash
+aws cognito-idp delete-user-pool \
+  --user-pool-id "$USER_POOL_ID" \
+  --region "$AWS_REGION"
+```
+
+Detach the managed policy and delete the Lambda execution role:
+
+```bash
+aws iam detach-role-policy \
+  --role-name "$LAMBDA_ROLE_NAME" \
+  --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+aws iam delete-role \
+  --role-name "$LAMBDA_ROLE_NAME"
+```
+
+Validate teardown:
+
+```bash
+aws apigateway get-rest-api \
+  --rest-api-id "$REST_API_ID" \
+  --region "$AWS_REGION"
+
+aws cognito-idp describe-user-pool \
+  --user-pool-id "$USER_POOL_ID" \
+  --region "$AWS_REGION"
+
+aws lambda get-function \
+  --function-name "$JEDI_FUNCTION" \
+  --region "$AWS_REGION"
+```
+
+Expected result: each validation command should return a not-found style error after teardown.
