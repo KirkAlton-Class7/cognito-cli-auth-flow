@@ -907,7 +907,7 @@ Expected output:
 ```
 
 > [!NOTE]
-> The real response contains full JWT/JWE strings. The examples intentionally abridge tokens after enough characters to show their shape.
+> The real response contains full JWT/JWE strings. The examples shorten tokens for readability, while preserving their overall structure.
 
 For the no-scope REST API route test, copy `<ID_TOKEN>`.
 
