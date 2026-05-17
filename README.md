@@ -1,6 +1,6 @@
 # Chewbacca Cognito CLI Auth Flow
 
-Basic AWS CLI lab for learning Cognito authentication flows, JWT validation, API Gateway, and Lambda with a Chewbacca, Jedi, and Sith theme.
+Basic AWS lab for learning Cognito authentication flows, JWT validation, API Gateway, and Lambda with a Chewbacca, Jedi, and Sith theme.
 
 This repo is intentionally smaller than Tawny Port. It isolates the authentication mechanics so you can see how Cognito behaves before putting the pattern inside a larger application.
 
@@ -8,9 +8,9 @@ This repo is intentionally smaller than Tawny Port. It isolates the authenticati
 
 The lab demonstrates the same Cognito identity flow across two API Gateway implementations:
 
-* Cognito owns the user pool, app client, password auth, MFA challenge, and JWT issuance.
-* The CLI walks through `USER_AUTH`, `SELECT_CHALLENGE`, `PASSWORD`, and `SOFTWARE_TOKEN_MFA`.
-* API Gateway protects simple Jedi and Sith Lambda routes.
+* The AWS Console is used to create the user pool, app client, Lambda functions, API Gateway routes, and authorizers.
+* The CLI walks through `USER_AUTH`, `SELECT_CHALLENGE`, `PASSWORD`, `SOFTWARE_TOKEN_MFA`, token export, and route testing.
+* API Gateway protects simple Jedi and Sith Lambda routes after the console infrastructure is in place.
 * Lambda only runs after API Gateway accepts the Cognito token.
 * CloudWatch proves whether the request actually reached the function.
 
@@ -61,6 +61,29 @@ Both versions preserve the same user, challenge, MFA, and token flow. The differ
 
 > [!NOTE]
 > A Lambda authorizer is not required here. Cognito issues the token, and both API Gateway implementations can validate Cognito tokens natively. Use a Lambda authorizer only when you need custom policy logic or a non-Cognito identity provider.
+
+## Build Mode
+
+Use the **AWS Console** for infrastructure creation:
+
+```text
+IAM role
+Lambda functions
+Cognito user pool and app client
+API Gateway API, routes/resources, integrations, stages, and authorizers
+```
+
+Use the **CLI** for the authentication workflow and validation:
+
+```text
+SECRET_HASH
+USER_AUTH
+SELECT_CHALLENGE
+PASSWORD
+SOFTWARE_TOKEN_MFA
+JWT export
+curl route tests
+```
 
 ## Repository Structure
 

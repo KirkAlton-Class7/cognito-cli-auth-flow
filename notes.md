@@ -43,7 +43,32 @@ Keep these close while studying the CLI flow. The CLI commands make more sense w
 
 ## Concept Overview
 
-Cognito CLI authentication is useful because it strips away the browser, hosted UI, cookies, and application session layer. You see the raw authentication sequence:
+This lab is mixed-mode on purpose. The infrastructure is created in the AWS Console so the AWS service relationships are visible. The authentication flow is tested in the CLI so the Cognito challenge sequence is explicit.
+
+Console-owned setup:
+
+```text
+IAM role
+Lambda functions
+API Gateway API, integrations, routes/resources, stages, and authorizers
+Cognito user pool
+Cognito app client
+Chewbacca test user
+```
+
+CLI-owned validation:
+
+```text
+SECRET_HASH
+USER_AUTH
+SELECT_CHALLENGE
+PASSWORD
+SOFTWARE_TOKEN_MFA
+JWT export
+curl protected-route tests
+```
+
+Cognito CLI authentication is useful because it strips away the browser, hosted UI, cookies, and application session layer during testing. You see the raw authentication sequence:
 
 ```text
 USERNAME + CLIENT_ID + CLIENT_SECRET
@@ -275,21 +300,23 @@ if __name__ == "__main__":
     main()
 ```
 
-## CLI Workflow
+## Console Infrastructure And CLI Authentication Workflow
 
-### 1. Export Base Variables
+The infrastructure resources should be created in the AWS Console. The command blocks below are useful as exact-value references and optional automation equivalents, but the class workflow is console setup first, then CLI authentication and route validation.
+
+### 1. Export Base Values For CLI Testing
 
 HTTP API version:
 
 ```bash
-export AWS_REGION="us-east-1"
+export AWS_REGION="us-west-2"
 export PROJECT_NAME="chewbacca-auth-http"
 ```
 
 REST API version:
 
 ```bash
-export AWS_REGION="us-east-1"
+export AWS_REGION="us-west-2"
 export PROJECT_NAME="chewbacca-auth-rest"
 ```
 
@@ -312,6 +339,10 @@ export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output tex
 ```
 
 ### 2. Create Lambda Execution Role
+
+Console path: **IAM** -> **Roles** -> **Create role** -> trusted entity **Lambda** -> attach `AWSLambdaBasicExecutionRole` -> role name from `LAMBDA_ROLE_NAME`.
+
+Equivalent CLI reference:
 
 ```bash
 aws iam create-role \
@@ -354,6 +385,10 @@ zip sith-node.zip sith_node.js
 
 ### 4. Create Lambda Functions
 
+Console path: **Lambda** -> **Create function** -> **Author from scratch**. Use the function names, runtimes, handlers, and ZIP files shown below.
+
+Equivalent CLI reference:
+
 ```bash
 aws lambda create-function \
   --function-name "$JEDI_FUNCTION" \
@@ -375,6 +410,10 @@ aws lambda create-function \
 ```
 
 ### 5. Create Cognito User Pool
+
+Console path: **Amazon Cognito** -> **User pools** -> **Create user pool**. Use email sign-in, software-token MFA, and the password policy shown below.
+
+Equivalent CLI reference:
 
 ```bash
 export USER_POOL_ID=$(aws cognito-idp create-user-pool \
@@ -406,6 +445,10 @@ export USER_POOL_ARN="arn:aws:cognito-idp:${AWS_REGION}:${AWS_ACCOUNT_ID}:userpo
 
 The app client intentionally has a secret so the lab teaches `SECRET_HASH`.
 
+Console path: open the user pool -> **App clients** -> **Create app client**. Enable the auth flows shown below and generate a client secret.
+
+Equivalent CLI reference:
+
 ```bash
 export CLIENT_JSON=$(aws cognito-idp create-user-pool-client \
   --user-pool-id "$USER_POOL_ID" \
@@ -423,6 +466,10 @@ export CLIENT_SECRET=$(echo "$CLIENT_JSON" | jq -r '.ClientSecret')
 ```
 
 ### 7. Create Test User
+
+Console path: open the user pool -> **Users** -> **Create user**. Use the username, email, and password values from the export block.
+
+Equivalent CLI reference:
 
 ```bash
 aws cognito-idp admin-create-user \
@@ -628,9 +675,11 @@ echo "${REFRESH_TOKEN:0:24}"
 
 Resource links for this section: [HTTP APIs](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api.html), [HTTP API JWT authorizers](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-jwt-authorizer.html), and [HTTP API Lambda proxy integrations](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-develop-integrations-lambda.html).
 
-HTTP API uses `apigatewayv2`.
+HTTP API uses `apigatewayv2` for CLI reference, but the intended lab setup is console-first.
 
-Create API:
+Console path: **API Gateway** -> **Create API** -> **HTTP API** -> create the API from `API_NAME`, add Lambda integrations for `/jedi` and `/sith`, create the `prod` stage, then attach a JWT authorizer.
+
+Equivalent CLI reference:
 
 ```bash
 export API_ID=$(aws apigatewayv2 create-api \
@@ -674,9 +723,11 @@ Valid access token -> Lambda runs
 
 Resource links for this section: [REST APIs](https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-rest-api.html), [Cognito user pool authorizers for REST APIs](https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-integrate-with-cognito.html), and [REST API Lambda proxy integrations](https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html).
 
-REST API uses `apigateway`.
+REST API uses `apigateway` for CLI reference, but the intended lab setup is console-first.
 
-Create API:
+Console path: **API Gateway** -> **Create API** -> **REST API** -> create the API from `API_NAME`, add `/jedi` and `/sith` resources, add `GET` methods, enable Lambda proxy integration, deploy to `prod`, then attach the Cognito User Pool authorizer.
+
+Equivalent CLI reference:
 
 ```bash
 export REST_API_ID=$(aws apigateway create-rest-api \

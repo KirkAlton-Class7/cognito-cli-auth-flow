@@ -20,7 +20,7 @@ status: active
 REST API implementation of the Chewbacca Cognito CLI auth-flow lab.<br>
 View the HTTP API version [here](../../HTTPS/README.md) if you prefer that implementation.<br><br>
 
-This lab keeps the same authentication story as the HTTP API version:
+This lab keeps the same authentication story as the HTTP API version. Build the infrastructure in the AWS Console, then use the CLI for the Cognito challenge flow, token export, and protected route tests:
 
 ```text
 Chewbacca CLI user
@@ -40,6 +40,38 @@ The implementation difference is API Gateway. REST APIs do not use the HTTP API 
 > [!NOTE]
 > No custom authenticator Lambda is needed for the protected Jedi and Sith routes. API Gateway REST API can validate Cognito user-pool tokens directly with a Cognito authorizer. A Lambda authorizer would be useful for custom token logic, non-Cognito identity providers, or policy decisions that Cognito scopes alone cannot express.
 
+## Build Mode
+
+Use the **AWS Console** to create infrastructure:
+
+```text
+IAM role
+Lambda functions
+REST API
+REST resources and methods
+Lambda proxy integrations
+Cognito user pool
+Cognito app client
+Chewbacca test user
+REST API Cognito User Pool authorizer
+prod deployment
+```
+
+Use the **CLI** after the console build to test authentication:
+
+```text
+export generated IDs and names
+generate SECRET_HASH
+run USER_AUTH
+choose PASSWORD
+complete SOFTWARE_TOKEN_MFA
+export JWT tokens
+call protected routes with curl
+```
+
+> [!NOTE]
+> CLI blocks in the infrastructure sections are equivalent reference commands. The intended lab flow is console setup first, then CLI authentication and validation.
+
 ## What You Build
 
 | Route | Runtime | Theme role | Protection |
@@ -56,7 +88,7 @@ The implementation difference is API Gateway. REST APIs do not use the HTTP API 
 | `/Users/kirk/Codex/sandbox/cognito-class7-05-05-2026.md` | Recovered class notes for `USER_AUTH`, challenge selection, MFA, and token handling |
 | `/Users/kirk/Codex/sandbox/lambda/lessonb` | Original simple API Gateway + Lambda lab pattern |
 
-## Prerequisites
+## Prerequisites For CLI Testing
 
 Install or confirm these tools:
 
@@ -79,12 +111,12 @@ Set the working directory:
 cd /Users/kirk/Codex/sandbox/cognito-cli-auth-flow
 ```
 
-## 1. Export Lab Variables
+## 1. Record And Export Lab Values For CLI Testing
 
-Use a REST-specific project name so this version can run beside the HTTP API version.
+Create the infrastructure in the AWS Console using these names, then export the same values in your terminal before running the authentication flow. Use a REST-specific project name so this version can run beside the HTTP API version.
 
 ```bash
-export AWS_REGION="us-east-1"
+export AWS_REGION="us-west-2"
 export PROJECT_NAME="chewbacca-auth-rest"
 
 export JEDI_FUNCTION="${PROJECT_NAME}-jedi-python"
@@ -118,6 +150,10 @@ echo "$PROJECT_NAME"
 ## 2. Create the Lambda Execution Role
 
 Lambda needs permission to write logs to CloudWatch.
+
+Console path: **IAM** -> **Roles** -> **Create role** -> trusted entity **Lambda** -> attach `AWSLambdaBasicExecutionRole` -> role name from `LAMBDA_ROLE_NAME`.
+
+Equivalent CLI reference:
 
 ```bash
 aws iam create-role \
@@ -185,6 +221,10 @@ ls -lh *.zip
 ## 4. Create the Lambda Functions
 
 Create the Jedi Python Lambda:
+
+Console path: **Lambda** -> **Create function** -> **Author from scratch**. Use the function names, runtimes, handlers, and ZIP files shown below.
+
+Equivalent CLI reference:
 
 ```bash
 aws lambda create-function \
@@ -267,7 +307,9 @@ Validation:
 
 ## 6. Create the REST API
 
-Create the API:
+Console path: **API Gateway** -> **Create API** -> **REST API** -> **Build** -> **New API** -> API name from `API_NAME` -> endpoint type **Regional**.
+
+Equivalent CLI reference:
 
 ```bash
 export REST_API_ID=$(aws apigateway create-rest-api \
@@ -319,6 +361,10 @@ echo "$SITH_RESOURCE_ID"
 ## 7. Add REST Methods And Lambda Proxy Integrations
 
 Create public `GET` methods first so you can prove the API and Lambda routing work before adding Cognito.
+
+In the console, create `/jedi` and `/sith` resources, add `GET` methods, use Lambda proxy integration, select the matching Lambda function, and deploy to the `prod` stage.
+
+Equivalent CLI reference:
 
 ```bash
 aws apigateway put-method \
@@ -413,6 +459,10 @@ Validation:
 
 Create a user pool with optional software token MFA.
 
+Console path: **Amazon Cognito** -> **User pools** -> **Create user pool**. Use email sign-in, software-token MFA, and the password policy shown below.
+
+Equivalent CLI reference:
+
 ```bash
 export USER_POOL_ID=$(aws cognito-idp create-user-pool \
   --pool-name "$USER_POOL_NAME" \
@@ -453,6 +503,10 @@ echo "$USER_POOL_ARN"
 
 This lab uses an app client with a client secret on purpose so you can learn `SECRET_HASH`.
 
+Console path: open the user pool -> **App clients** -> **Create app client**. Enable the auth flows shown below and generate a client secret.
+
+Equivalent CLI reference:
+
 ```bash
 export CLIENT_JSON=$(aws cognito-idp create-user-pool-client \
   --user-pool-id "$USER_POOL_ID" \
@@ -484,6 +538,10 @@ echo "${CLIENT_SECRET:0:8}..."
 ## 11. Create the Test User
 
 Create `chewbacca` and suppress the welcome email:
+
+Console path: open the user pool -> **Users** -> **Create user**. Use the username, email, and password values from the export block.
+
+Equivalent CLI reference:
 
 ```bash
 aws cognito-idp admin-create-user \
@@ -727,7 +785,9 @@ Authorization: Bearer $ID_TOKEN
 
 ## 18. Add the REST API Cognito Authorizer
 
-Create the Cognito User Pool authorizer:
+Console path: open the REST API -> **Authorizers** -> **Create authorizer**. Use a Cognito User Pool authorizer with token source `Authorization`, then attach it to the `GET /jedi` and `GET /sith` methods.
+
+Equivalent CLI reference:
 
 ```bash
 export COGNITO_AUTHORIZER_ID=$(aws apigateway create-authorizer \

@@ -3,7 +3,7 @@
 HTTP API implementation of the Chewbacca Cognito CLI auth-flow lab.<br>
 View the REST version [here](../REST/README.md) if you prefer that implementation.<br><br>
 
-This version uses API Gateway **HTTP API** routes with a built-in JWT authorizer. The Cognito CLI flow is the same as the REST version: Chewbacca signs in through Cognito CLI commands, completes MFA, exports an access token, and uses it to reach protected Jedi and Sith Lambda routes.
+This version uses API Gateway **HTTP API** routes with a built-in JWT authorizer. Build the infrastructure in the AWS Console, then use the CLI for the Cognito challenge flow, token export, and protected route tests.
 
 > [!IMPORTANT]
 > This folder documents the HTTP API implementation. Keep its API ID, stage, routes, and cleanup variables separate from the REST implementation.
@@ -13,7 +13,7 @@ This version uses API Gateway **HTTP API** routes with a built-in JWT authorizer
 | Document | Use |
 | --- | --- |
 | [Architecture](docs/architecture.md) | HTTP API request flow and authorization boundary |
-| [Full Runbook](docs/cognito-auth-flow-https-runbook.md) | CLI implementation guide from AWS setup through protected route validation |
+| [Full Runbook](docs/cognito-auth-flow-https-runbook.md) | Console infrastructure guide with CLI authentication and protected route validation |
 | [REST Version](../REST/README.md) | Companion REST API implementation |
 | [Shared Lambda Code](../shared/lambda-code/) | Jedi and Sith Lambda handlers |
 | [Secret Hash Helper](../shared/scripts/secret_hash.py) | Cognito `SECRET_HASH` helper |
@@ -32,7 +32,7 @@ Chewbacca CLI
 
 ## Get Started
 
-Use the [HTTPS runbook](docs/cognito-auth-flow-https-runbook.md) to build:
+Use the [HTTPS runbook](docs/cognito-auth-flow-https-runbook.md) to build the infrastructure in the AWS Console and validate the authentication flow from the CLI:
 
 * Cognito user pool and app client
 * Chewbacca test user with software token MFA

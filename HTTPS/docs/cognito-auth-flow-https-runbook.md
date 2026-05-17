@@ -19,11 +19,40 @@ status: active
 HTTP API implementation of the Chewbacca Cognito CLI auth-flow lab.<br>
 View the REST version [here](../../REST/README.md) if you prefer that implementation.<br><br>
 
-This lab rebuilds the class workflow that shows how Cognito authentication works from the command line. It keeps the architecture intentionally small: one user pool, one app client, two Lambda functions, one HTTP API, and a Cognito JWT authorizer.
+This lab rebuilds the class workflow that shows how Cognito authentication works from the command line after the infrastructure is created in the AWS Console. It keeps the architecture intentionally small: one user pool, one app client, two Lambda functions, one HTTP API, and a Cognito JWT authorizer.
 
 > [!IMPORTANT]
 > This folder documents the HTTP API implementation. The REST implementation uses the same Cognito flow but a different API Gateway command set and authorizer type.
 
+## Build Mode
+
+Use the **AWS Console** to create infrastructure:
+
+```text
+IAM role
+Lambda functions
+HTTP API
+Lambda integrations
+Cognito user pool
+Cognito app client
+Chewbacca test user
+HTTP API JWT authorizer
+```
+
+Use the **CLI** after the console build to test authentication:
+
+```text
+export generated IDs and names
+generate SECRET_HASH
+run USER_AUTH
+choose PASSWORD
+complete SOFTWARE_TOKEN_MFA
+export JWT tokens
+call protected routes with curl
+```
+
+> [!NOTE]
+> CLI blocks in the infrastructure sections are equivalent reference commands. The intended lab flow is console setup first, then CLI authentication and validation.
 
 ## What You Build
 
@@ -58,7 +87,7 @@ The API routes are intentionally simple:
 | [`../../shared/lambda-code`](../../shared/lambda-code/) | Simplified Chewbacca/Jedi/Sith Lambda functions for this runbook |
 | [`../../shared/scripts/secret_hash.py`](../../shared/scripts/secret_hash.py) | Helper script for Cognito app clients with a client secret |
 
-## Prerequisites
+## Prerequisites For CLI Testing
 
 Install or confirm these tools:
 
@@ -81,12 +110,12 @@ Set the working directory:
 cd /Users/kirk/Codex/sandbox/cognito-cli-auth-flow
 ```
 
-## 1. Export Lab Variables
+## 1. Record And Export Lab Values For CLI Testing
 
-Use one region for the full lab.
+Create the infrastructure in the AWS Console using these names, then export the same values in your terminal before running the authentication flow.
 
 ```bash
-export AWS_REGION="us-east-1"
+export AWS_REGION="us-west-2"
 export PROJECT_NAME="chewbacca-auth-http"
 
 export JEDI_FUNCTION="${PROJECT_NAME}-jedi-python"
@@ -120,6 +149,10 @@ echo "$PROJECT_NAME"
 ## 2. Create the Lambda Execution Role
 
 Lambda needs permission to write logs to CloudWatch.
+
+Console path: **IAM** -> **Roles** -> **Create role** -> trusted entity **Lambda** -> attach `AWSLambdaBasicExecutionRole` -> role name from `LAMBDA_ROLE_NAME`.
+
+Equivalent CLI reference:
 
 ```bash
 aws iam create-role \
@@ -187,6 +220,10 @@ ls -lh *.zip
 ## 4. Create the Lambda Functions
 
 Create the Jedi Python Lambda:
+
+Console path: **Lambda** -> **Create function** -> **Author from scratch**. Use the function names, runtimes, handlers, and ZIP files shown below.
+
+Equivalent CLI reference:
 
 ```bash
 aws lambda create-function \
@@ -269,7 +306,9 @@ Validation:
 
 ## 6. Create the HTTP API
 
-Create the API:
+Console path: **API Gateway** -> **Create API** -> **HTTP API** -> API name from `API_NAME`.
+
+Equivalent CLI reference:
 
 ```bash
 export API_ID=$(aws apigatewayv2 create-api \
@@ -299,7 +338,9 @@ echo "$API_ENDPOINT"
 
 ## 7. Add Lambda Integrations
 
-Create the Jedi integration:
+In the console, add Lambda integrations for `jedi` and `sith`, then create the `GET /jedi` and `GET /sith` routes. Keep the `prod` stage auto-deployed.
+
+Equivalent CLI reference for the Jedi integration:
 
 ```bash
 export JEDI_INTEGRATION_ID=$(aws apigatewayv2 create-integration \
@@ -390,6 +431,10 @@ Validation:
 
 Create a user pool with optional software token MFA.
 
+Console path: **Amazon Cognito** -> **User pools** -> **Create user pool**. Use email sign-in, software-token MFA, and the password policy shown below.
+
+Equivalent CLI reference:
+
 ```bash
 export USER_POOL_ID=$(aws cognito-idp create-user-pool \
   --pool-name "$USER_POOL_NAME" \
@@ -428,6 +473,10 @@ echo "$COGNITO_ISSUER"
 
 This lab uses an app client with a client secret on purpose so you can learn `SECRET_HASH`.
 
+Console path: open the user pool -> **App clients** -> **Create app client**. Enable the auth flows shown below and generate a client secret.
+
+Equivalent CLI reference:
+
 ```bash
 export CLIENT_JSON=$(aws cognito-idp create-user-pool-client \
   --user-pool-id "$USER_POOL_ID" \
@@ -459,6 +508,10 @@ echo "${CLIENT_SECRET:0:8}..."
 ## 11. Create the Test User
 
 Create `chewbacca` and suppress the welcome email:
+
+Console path: open the user pool -> **Users** -> **Create user**. Use the username, email, and password values from the export block.
+
+Equivalent CLI reference:
 
 ```bash
 aws cognito-idp admin-create-user \
@@ -702,6 +755,10 @@ Authorization: Bearer $ACCESS_TOKEN
 ## 18. Add the Cognito JWT Authorizer
 
 Create the HTTP API JWT authorizer:
+
+Console path: open the HTTP API -> **Authorization** -> **Manage authorizers** -> **Create**. Use a JWT authorizer with issuer `COGNITO_ISSUER`, audience `CLIENT_ID`, and identity source `$request.header.Authorization`. Attach it to `GET /jedi` and `GET /sith`.
+
+Equivalent CLI reference:
 
 ```bash
 export COGNITO_AUTHORIZER_ID=$(aws apigatewayv2 create-authorizer \
