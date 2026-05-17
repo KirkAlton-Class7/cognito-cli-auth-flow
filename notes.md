@@ -44,6 +44,34 @@ Keep these close while studying the CLI flow. The CLI commands make more sense w
 | Lambda proxy integration | [API Gateway Lambda proxy integrations](https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html) |
 | JWT structure | [JWT introduction](https://jwt.io/introduction) |
 
+### AWS CLI Command References
+
+These are the direct AWS CLI command reference pages for the commands used in the lab notes.
+
+| Command | AWS CLI reference |
+| --- | --- |
+| `aws sts get-caller-identity` | [sts get-caller-identity](https://docs.aws.amazon.com/cli/latest/reference/sts/get-caller-identity.html) |
+| `aws iam create-role` | [iam create-role](https://docs.aws.amazon.com/cli/latest/reference/iam/create-role.html) |
+| `aws iam attach-role-policy` | [iam attach-role-policy](https://docs.aws.amazon.com/cli/latest/reference/iam/attach-role-policy.html) |
+| `aws iam get-role` | [iam get-role](https://docs.aws.amazon.com/cli/latest/reference/iam/get-role.html) |
+| `aws lambda create-function` | [lambda create-function](https://docs.aws.amazon.com/cli/latest/reference/lambda/create-function.html) |
+| `aws cognito-idp create-user-pool` | [cognito-idp create-user-pool](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/create-user-pool.html) |
+| `aws cognito-idp set-user-pool-mfa-config` | [cognito-idp set-user-pool-mfa-config](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/set-user-pool-mfa-config.html) |
+| `aws cognito-idp create-user-pool-client` | [cognito-idp create-user-pool-client](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/create-user-pool-client.html) |
+| `aws cognito-idp admin-create-user` | [cognito-idp admin-create-user](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/admin-create-user.html) |
+| `aws cognito-idp admin-set-user-password` | [cognito-idp admin-set-user-password](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/admin-set-user-password.html) |
+| `aws cognito-idp initiate-auth` | [cognito-idp initiate-auth](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/initiate-auth.html) |
+| `aws cognito-idp associate-software-token` | [cognito-idp associate-software-token](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/associate-software-token.html) |
+| `aws cognito-idp verify-software-token` | [cognito-idp verify-software-token](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/verify-software-token.html) |
+| `aws cognito-idp set-user-mfa-preference` | [cognito-idp set-user-mfa-preference](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/set-user-mfa-preference.html) |
+| `aws cognito-idp respond-to-auth-challenge` | [cognito-idp respond-to-auth-challenge](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/respond-to-auth-challenge.html) |
+| `aws apigatewayv2 create-api` | [apigatewayv2 create-api](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/create-api.html) |
+| `aws apigatewayv2 create-authorizer` | [apigatewayv2 create-authorizer](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/create-authorizer.html) |
+| `aws apigateway create-rest-api` | [apigateway create-rest-api](https://docs.aws.amazon.com/cli/latest/reference/apigateway/create-rest-api.html) |
+| `aws apigateway create-authorizer` | [apigateway create-authorizer](https://docs.aws.amazon.com/cli/latest/reference/apigateway/create-authorizer.html) |
+| `aws apigateway update-method` | [apigateway update-method](https://docs.aws.amazon.com/cli/latest/reference/apigateway/update-method.html) |
+| `aws apigateway create-deployment` | [apigateway create-deployment](https://docs.aws.amazon.com/cli/latest/reference/apigateway/create-deployment.html) |
+
 ## Concept Overview
 
 This lab is mixed-mode on purpose. The infrastructure is created in the AWS Console so the AWS service relationships are visible. The authentication flow is tested in the CLI so the Cognito challenge sequence is explicit.
@@ -570,9 +598,9 @@ Resource links for this section: [Amazon Cognito MFA](https://docs.aws.amazon.co
 
 The lab uses software token MFA.
 
-First authenticate with direct password auth:
+First authenticate with direct username-password auth to begin initial TOTP MFA setup:
 
-This `initiate-auth` command uses `USER_PASSWORD_AUTH`, so the password is submitted directly in the request. Here it is only a bootstrap move: the goal is to receive a short-lived access token that can authorize software-token MFA setup for the user.
+This `initiate-auth` command uses `USER_PASSWORD_AUTH`, so the password is submitted directly in the request. Here it is only an initial setup move: the goal is to receive a short-lived access token that can authorize software-token MFA enrollment for the user.
 
 ```bash
 export INITIAL_AUTH_RESPONSE=$(aws cognito-idp initiate-auth \
@@ -667,6 +695,9 @@ Expected:
 
 Copy the `Session` from the `SELECT_CHALLENGE` response.
 
+> [!warning]
+> A Cognito `Session` belongs to one specific challenge chain. If you answer `SELECT_CHALLENGE` with a session from `USER_PASSWORD_AUTH`, an older run, another app client, or another user, Cognito can return `Invalid session due to a mismatched auth flow`. Restart from `initiate-auth --auth-flow USER_AUTH` and copy the fresh `Session` from that response.
+
 `respond-to-auth-challenge` answers Cognito's current prompt. In this step, `ANSWER="PASSWORD"` selects the password method from the available choices and supplies the user's password. If the password is accepted and MFA is enabled, Cognito returns a new `SOFTWARE_TOKEN_MFA` challenge session.
 
 ```bash
@@ -689,6 +720,9 @@ Expected:
 ```
 
 Copy the new `Session` from the `SOFTWARE_TOKEN_MFA` response. Then use a fresh code from the authenticator app.
+
+> [!warning]
+> Do not reuse the earlier `SELECT_CHALLENGE` session for MFA. The password challenge returns a new `Session`, and that new value is the only valid handoff into `SOFTWARE_TOKEN_MFA`.
 
 The next `respond-to-auth-challenge` call answers the MFA prompt. The session must come from the password step, and the TOTP code must be current; when Cognito accepts it, the response contains tokens instead of another challenge.
 
@@ -760,7 +794,7 @@ echo "${SESSION:0:20}"
 ```
 
 > [!warning]
-> Cognito challenge sessions are short-lived. If too much time passes between `initiate-auth`, `SELECT_CHALLENGE`, and `SOFTWARE_TOKEN_MFA`, restart from Step 1 and replace `SESSION` with the new value.
+> Cognito challenge sessions are short-lived and flow-specific. If too much time passes, or if you mix a session from `USER_PASSWORD_AUTH` with `USER_AUTH`, restart from Step 1 and replace `SESSION` with the new value.
 
 ### Step 3: Choose `PASSWORD`
 
@@ -1066,6 +1100,7 @@ The CLI flow is better for understanding raw challenge mechanics. Hosted UI is b
 | --- | --- | --- |
 | `Unable to verify secret hash` | Username, client ID, or client secret mismatch | Recompute `SECRET_HASH` with exact username and client values |
 | `InvalidParameterException` for `USER_AUTH` | App client does not allow `ALLOW_USER_AUTH` | Recreate/update client explicit auth flows |
+| `Invalid session due to a mismatched auth flow` | The `Session` came from the wrong auth flow, an older challenge chain, another app client, or another user | Restart from `initiate-auth --auth-flow USER_AUTH`, copy the fresh `SELECT_CHALLENGE` session, then use the new MFA session returned by the password step |
 | `NotAuthorizedException` | Wrong password, expired session, wrong secret hash | Restart auth from `initiate-auth` |
 | `CodeMismatchException` | MFA code expired or copied wrong | Wait for a fresh authenticator code |
 | `{"message":"The incoming token has expired"}` | API Gateway received an expired JWT | Re-run the auth flow and export a fresh route token |

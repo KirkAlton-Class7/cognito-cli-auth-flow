@@ -690,14 +690,14 @@ Expected output:
 > [!IMPORTANT]
 > Copy that output and use it as `<SECRET_HASH>` in the next manual commands.
 
-### 12.2 Manual Check: Bootstrap TOTP MFA
+### 12.2 Initial TOTP MFA Setup
 
-Authenticate once with direct password auth. MFA is optional at this point, so Cognito should return temporary tokens.
+Authenticate once with direct username-password auth to begin initial TOTP MFA setup. MFA is optional at this point, so Cognito should return temporary tokens.
 
 > [!NOTE]
-> Run this bootstrap step only for a fresh test user that has not enrolled an authenticator app yet. If MFA is already enrolled, skip to **12.3 Manual Check: Start `USER_AUTH`**.
+> Run this initial setup step only for a fresh test user that has not enrolled an authenticator app yet. If MFA is already enrolled, skip to **12.3 Manual Check: Start `USER_AUTH`**.
 
-This `initiate-auth` call starts a username-password sign-in with the password sent in the request. In this bootstrap pass, the goal is not to study challenge negotiation yet; it is to get a short-lived access token that can authorize the user's software-token MFA enrollment.
+This `initiate-auth` call starts a username-password sign-in with the password sent in the request. In this initial setup pass, the goal is not to study challenge negotiation yet; it is to get a short-lived access token that can authorize the user's software-token MFA enrollment.
 
 ```bash
 aws cognito-idp initiate-auth \
@@ -805,6 +805,9 @@ Expected output:
 
 Copy `<SELECT_CHALLENGE_SESSION>` into the next command.
 
+> [!WARNING]
+> A Cognito `Session` belongs to one specific challenge chain. If you answer `SELECT_CHALLENGE` with a session from `USER_PASSWORD_AUTH`, an older run, another app client, or another user, Cognito can return `Invalid session due to a mismatched auth flow`. Restart from **12.3 Manual Check: Start `USER_AUTH`** and copy the fresh `Session` from that response.
+
 ### 12.4 Manual Check: Choose `PASSWORD`
 
 `respond-to-auth-challenge` answers the `SELECT_CHALLENGE` prompt. In this step, `ANSWER="PASSWORD"` tells Cognito which available sign-in method to use, and the same request supplies the password. If the primary factor succeeds and MFA is enabled, Cognito returns the next challenge plus a new `Session`.
@@ -829,6 +832,9 @@ Expected output:
 ```
 
 Copy `<SOFTWARE_TOKEN_MFA_SESSION>` into the next command.
+
+> [!WARNING]
+> Do not reuse the earlier `SELECT_CHALLENGE` session for MFA. The password challenge returns a new `Session`, and that new value is the only valid handoff into `SOFTWARE_TOKEN_MFA`.
 
 ### 12.5 Manual Check: Respond To `SOFTWARE_TOKEN_MFA`
 
@@ -868,7 +874,7 @@ For the HTTP API route test, copy `<ACCESS_TOKEN>`.
 
 ## 13. Export-Driven Authentication Run
 
-After completing the manual run, repeat the same authentication flow with shell exports. This pass is for speed and repeatability.
+After completing the manual run, repeat the same authentication flow with shell exports. This pass is for repeatability and easier test reuse.
 
 ### 13.1 Export `SECRET_HASH`
 
@@ -1220,6 +1226,7 @@ This is simpler for CLI testing, but it does not teach the `SELECT_CHALLENGE` ne
 | --- | --- | --- |
 | `Unable to verify secret hash` | Wrong username, client ID, client secret, or copied hash | Regenerate `SECRET_HASH` with the exact same username used in the auth request |
 | `InvalidParameterException` for `USER_AUTH` | App client does not allow `ALLOW_USER_AUTH` or region/account does not support choice-based auth | Recreate/update app client with `ALLOW_USER_AUTH`; use `USER_PASSWORD_AUTH` if unavailable |
+| `Invalid session due to a mismatched auth flow` | The `Session` came from the wrong auth flow, an older challenge chain, another app client, or another user | Restart from `initiate-auth --auth-flow USER_AUTH`, copy the fresh `SELECT_CHALLENGE` session, then use the new MFA session returned by the password step |
 | `NotAuthorizedException` | Wrong password, stale session, wrong secret hash, or expired MFA step | Start the flow again from `initiate-auth` |
 | `CodeMismatchException` | MFA code expired or copied incorrectly | Wait for a fresh authenticator code |
 | `{"message":"The incoming token has expired"}` | Access token expired before the protected route test | Re-run the auth flow and export a fresh `ACCESS_TOKEN` |
@@ -1245,15 +1252,52 @@ CloudWatch proves what actually happened
 
 ## References
 
-* [AWS CLI `initiate-auth`](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/initiate-auth.html)
-* [AWS CLI `respond-to-auth-challenge`](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/respond-to-auth-challenge.html)
-* [AWS CLI `associate-software-token`](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/associate-software-token.html)
-* [AWS CLI `verify-software-token`](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/verify-software-token.html)
-* [AWS CLI `set-user-mfa-preference`](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/set-user-mfa-preference.html)
 * [Cognito authentication flows](https://docs.aws.amazon.com/cognito/latest/developerguide/authentication.html)
 * [Cognito MFA](https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-settings-mfa.html)
 * [API Gateway HTTP API JWT authorizers](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-jwt-authorizer.html)
 * [Lambda proxy integrations for HTTP APIs](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-develop-integrations-lambda.html)
+
+### AWS CLI Command References
+
+Every AWS CLI command used in this runbook is linked below to the direct AWS command reference page.
+
+| Command | AWS CLI reference |
+| --- | --- |
+| `aws sts get-caller-identity` | [sts get-caller-identity](https://docs.aws.amazon.com/cli/latest/reference/sts/get-caller-identity.html) |
+| `aws iam create-role` | [iam create-role](https://docs.aws.amazon.com/cli/latest/reference/iam/create-role.html) |
+| `aws iam attach-role-policy` | [iam attach-role-policy](https://docs.aws.amazon.com/cli/latest/reference/iam/attach-role-policy.html) |
+| `aws iam get-role` | [iam get-role](https://docs.aws.amazon.com/cli/latest/reference/iam/get-role.html) |
+| `aws iam detach-role-policy` | [iam detach-role-policy](https://docs.aws.amazon.com/cli/latest/reference/iam/detach-role-policy.html) |
+| `aws iam delete-role` | [iam delete-role](https://docs.aws.amazon.com/cli/latest/reference/iam/delete-role.html) |
+| `aws lambda create-function` | [lambda create-function](https://docs.aws.amazon.com/cli/latest/reference/lambda/create-function.html) |
+| `aws lambda get-function` | [lambda get-function](https://docs.aws.amazon.com/cli/latest/reference/lambda/get-function.html) |
+| `aws lambda invoke` | [lambda invoke](https://docs.aws.amazon.com/cli/latest/reference/lambda/invoke.html) |
+| `aws lambda add-permission` | [lambda add-permission](https://docs.aws.amazon.com/cli/latest/reference/lambda/add-permission.html) |
+| `aws lambda delete-function` | [lambda delete-function](https://docs.aws.amazon.com/cli/latest/reference/lambda/delete-function.html) |
+| `aws logs delete-log-group` | [logs delete-log-group](https://docs.aws.amazon.com/cli/latest/reference/logs/delete-log-group.html) |
+| `aws apigatewayv2 create-api` | [apigatewayv2 create-api](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/create-api.html) |
+| `aws apigatewayv2 get-api` | [apigatewayv2 get-api](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/get-api.html) |
+| `aws apigatewayv2 create-integration` | [apigatewayv2 create-integration](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/create-integration.html) |
+| `aws apigatewayv2 create-route` | [apigatewayv2 create-route](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/create-route.html) |
+| `aws apigatewayv2 create-stage` | [apigatewayv2 create-stage](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/create-stage.html) |
+| `aws apigatewayv2 create-authorizer` | [apigatewayv2 create-authorizer](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/create-authorizer.html) |
+| `aws apigatewayv2 get-routes` | [apigatewayv2 get-routes](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/get-routes.html) |
+| `aws apigatewayv2 update-route` | [apigatewayv2 update-route](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/update-route.html) |
+| `aws apigatewayv2 get-authorizer` | [apigatewayv2 get-authorizer](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/get-authorizer.html) |
+| `aws apigatewayv2 delete-api` | [apigatewayv2 delete-api](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/delete-api.html) |
+| `aws cognito-idp create-user-pool` | [cognito-idp create-user-pool](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/create-user-pool.html) |
+| `aws cognito-idp set-user-pool-mfa-config` | [cognito-idp set-user-pool-mfa-config](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/set-user-pool-mfa-config.html) |
+| `aws cognito-idp create-user-pool-client` | [cognito-idp create-user-pool-client](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/create-user-pool-client.html) |
+| `aws cognito-idp admin-create-user` | [cognito-idp admin-create-user](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/admin-create-user.html) |
+| `aws cognito-idp admin-set-user-password` | [cognito-idp admin-set-user-password](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/admin-set-user-password.html) |
+| `aws cognito-idp admin-get-user` | [cognito-idp admin-get-user](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/admin-get-user.html) |
+| `aws cognito-idp initiate-auth` | [cognito-idp initiate-auth](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/initiate-auth.html) |
+| `aws cognito-idp associate-software-token` | [cognito-idp associate-software-token](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/associate-software-token.html) |
+| `aws cognito-idp verify-software-token` | [cognito-idp verify-software-token](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/verify-software-token.html) |
+| `aws cognito-idp set-user-mfa-preference` | [cognito-idp set-user-mfa-preference](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/set-user-mfa-preference.html) |
+| `aws cognito-idp respond-to-auth-challenge` | [cognito-idp respond-to-auth-challenge](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/respond-to-auth-challenge.html) |
+| `aws cognito-idp delete-user-pool` | [cognito-idp delete-user-pool](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/delete-user-pool.html) |
+| `aws cognito-idp describe-user-pool` | [cognito-idp describe-user-pool](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/describe-user-pool.html) |
 
 ## Lab Teardown
 
