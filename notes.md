@@ -34,6 +34,9 @@ Keep these close while studying the CLI flow. The CLI commands make more sense w
 | `RespondToAuthChallenge` | [Amazon Cognito RespondToAuthChallenge API](https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_RespondToAuthChallenge.html) |
 | AWS CLI `initiate-auth` | [AWS CLI initiate-auth](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/initiate-auth.html) |
 | AWS CLI `respond-to-auth-challenge` | [AWS CLI respond-to-auth-challenge](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/respond-to-auth-challenge.html) |
+| AWS CLI `associate-software-token` | [AWS CLI associate-software-token](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/associate-software-token.html) |
+| AWS CLI `verify-software-token` | [AWS CLI verify-software-token](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/verify-software-token.html) |
+| AWS CLI `set-user-mfa-preference` | [AWS CLI set-user-mfa-preference](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/set-user-mfa-preference.html) |
 | `SECRET_HASH` | [Computing secret hash values](https://docs.aws.amazon.com/cognito/latest/developerguide/signing-up-users-in-your-app.html#cognito-user-pools-computing-secret-hash) |
 | MFA | [Amazon Cognito MFA](https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-settings-mfa.html) |
 | HTTP API JWT authorizers | [API Gateway HTTP API JWT authorizers](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-jwt-authorizer.html) |
@@ -531,6 +534,8 @@ aws cognito-idp admin-set-user-password \
 
 ### 8. Generate `SECRET_HASH`
 
+`SECRET_HASH` is the app-client proof for clients that have a secret. Cognito expects this derived HMAC value in authentication requests so the caller proves it knows the client secret without sending the raw secret as the hash itself.
+
 ```bash
 cd "$LAB_REPO"
 ```
@@ -561,11 +566,13 @@ echo "${SECRET_HASH:0:20}"
 
 ## MFA Enrollment
 
-Resource links for this section: [Amazon Cognito MFA](https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-settings-mfa.html), [associate-software-token](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/associate-software-token.html), and [verify-software-token](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/verify-software-token.html).
+Resource links for this section: [Amazon Cognito MFA](https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-settings-mfa.html), [associate-software-token](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/associate-software-token.html), [verify-software-token](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/verify-software-token.html), and [set-user-mfa-preference](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/set-user-mfa-preference.html).
 
 The lab uses software token MFA.
 
 First authenticate with direct password auth:
+
+This `initiate-auth` command uses `USER_PASSWORD_AUTH`, so the password is submitted directly in the request. Here it is only a bootstrap move: the goal is to receive a short-lived access token that can authorize software-token MFA setup for the user.
 
 ```bash
 export INITIAL_AUTH_RESPONSE=$(aws cognito-idp initiate-auth \
@@ -586,6 +593,8 @@ export ACCESS_TOKEN=$(echo "$INITIAL_AUTH_RESPONSE" | jq -r '.AuthenticationResu
 
 Associate a software token:
 
+`associate-software-token` starts TOTP enrollment. Cognito generates and returns a private setup key, and that key becomes the shared secret between Cognito and the authenticator app.
+
 ```bash
 export TOTP_SETUP_RESPONSE=$(aws cognito-idp associate-software-token \
   --access-token "$ACCESS_TOKEN" \
@@ -601,6 +610,8 @@ echo "$TOTP_SECRET"
 
 Verify the current authenticator code:
 
+`verify-software-token` checks a six-digit code from the authenticator app against the shared TOTP secret. A successful response marks the software token as verified for the user.
+
 ```bash
 export TOTP_CODE="123456"
 
@@ -612,6 +623,8 @@ aws cognito-idp verify-software-token \
 ```
 
 Set software token MFA as preferred:
+
+`set-user-mfa-preference` turns software-token MFA on for this user and makes it the preferred MFA method. After this, Cognito should challenge the user for a TOTP code during sign-in.
 
 ```bash
 aws cognito-idp set-user-mfa-preference \
@@ -628,6 +641,8 @@ Resource links for this section: [AWS CLI initiate-auth](https://docs.aws.amazon
 
 Run this once without assigning responses to variables. The goal is to see the challenge sequence plainly.
 
+`USER_AUTH` starts Cognito's choice-based authentication flow. The first request identifies the user and asks Cognito which sign-in methods are available; Cognito responds with `SELECT_CHALLENGE` and a session value that preserves the challenge state.
+
 ```bash
 aws cognito-idp initiate-auth \
   --client-id "$CLIENT_ID" \
@@ -636,7 +651,23 @@ aws cognito-idp initiate-auth \
   --region "$AWS_REGION" | jq
 ```
 
+Expected:
+
+```json
+{
+  "ChallengeName": "SELECT_CHALLENGE",
+  "Session": "AYABe...<SELECT_CHALLENGE_SESSION>",
+  "AvailableChallenges": [
+    "PASSWORD",
+    "PASSWORD_SRP"
+  ],
+  "ChallengeParameters": {}
+}
+```
+
 Copy the `Session` from the `SELECT_CHALLENGE` response.
+
+`respond-to-auth-challenge` answers Cognito's current prompt. In this step, `ANSWER="PASSWORD"` selects the password method from the available choices and supplies the user's password. If the password is accepted and MFA is enabled, Cognito returns a new `SOFTWARE_TOKEN_MFA` challenge session.
 
 ```bash
 aws cognito-idp respond-to-auth-challenge \
@@ -647,7 +678,19 @@ aws cognito-idp respond-to-auth-challenge \
   --region "$AWS_REGION" | jq
 ```
 
+Expected:
+
+```json
+{
+  "ChallengeName": "SOFTWARE_TOKEN_MFA",
+  "Session": "AYABe...<SOFTWARE_TOKEN_MFA_SESSION>",
+  "ChallengeParameters": {}
+}
+```
+
 Copy the new `Session` from the `SOFTWARE_TOKEN_MFA` response. Then use a fresh code from the authenticator app.
+
+The next `respond-to-auth-challenge` call answers the MFA prompt. The session must come from the password step, and the TOTP code must be current; when Cognito accepts it, the response contains tokens instead of another challenge.
 
 ```bash
 aws cognito-idp respond-to-auth-challenge \
@@ -658,11 +701,28 @@ aws cognito-idp respond-to-auth-challenge \
   --region "$AWS_REGION" | jq
 ```
 
+Expected:
+
+```json
+{
+  "ChallengeParameters": {},
+  "AuthenticationResult": {
+    "AccessToken": "eyJraWQiOiJ...<ACCESS_TOKEN_HEADER>...eyJ1c2VybmFtZSI6ImNoZXdiYWNjYSJ9...<ACCESS_TOKEN_SIGNATURE>",
+    "ExpiresIn": 900,
+    "TokenType": "Bearer",
+    "RefreshToken": "eyJjdHkiOiJKV1QiLCJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAifQ...<REFRESH_TOKEN>",
+    "IdToken": "eyJraWQiOiJ...<ID_TOKEN_HEADER>...eyJlbWFpbCI6ImNoZXdiYWNjYUBleGFtcGxlLmNvbSJ9...<ID_TOKEN_SIGNATURE>"
+  }
+}
+```
+
 The final response contains `AccessToken`, `IdToken`, and `RefreshToken`. Copy the route token manually for the first protected-route test, then use the export path below for repeated tests.
 
 ### Export-Driven Pass
 
 ### Step 1: Initiate `USER_AUTH`
+
+This repeats the documented `USER_AUTH` start step, but stores the response so `jq` can extract the challenge session for the next command.
 
 ```bash
 export AUTH_RESPONSE=$(aws cognito-idp initiate-auth \
@@ -683,11 +743,12 @@ Expected:
 ```json
 {
   "ChallengeName": "SELECT_CHALLENGE",
+  "Session": "AYABe...<SELECT_CHALLENGE_SESSION>",
   "AvailableChallenges": [
     "PASSWORD",
     "PASSWORD_SRP"
   ],
-  "Session": "..."
+  "ChallengeParameters": {}
 }
 ```
 
@@ -703,6 +764,8 @@ echo "${SESSION:0:20}"
 
 ### Step 3: Choose `PASSWORD`
 
+This exported challenge response chooses the password method and captures Cognito's next challenge. Treat the returned `Session` as a one-use handoff into the MFA step.
+
 ```bash
 export PASSWORD_CHALLENGE_RESPONSE=$(aws cognito-idp respond-to-auth-challenge \
   --client-id "$CLIENT_ID" \
@@ -717,7 +780,8 @@ Expected:
 ```json
 {
   "ChallengeName": "SOFTWARE_TOKEN_MFA",
-  "Session": "..."
+  "Session": "AYABe...<SOFTWARE_TOKEN_MFA_SESSION>",
+  "ChallengeParameters": {}
 }
 ```
 
@@ -729,6 +793,8 @@ export SESSION=$(echo "$PASSWORD_CHALLENGE_RESPONSE" | jq -r '.Session')
 
 ### Step 5: Respond To MFA
 
+This completes the exported challenge chain. The current TOTP code and latest `Session` are submitted together; success returns `AuthenticationResult` with the lab tokens.
+
 ```bash
 export TOTP_CODE="123456"
 
@@ -739,6 +805,24 @@ export MFA_RESPONSE=$(aws cognito-idp respond-to-auth-challenge \
   --session "$SESSION" \
   --region "$AWS_REGION")
 ```
+
+Expected:
+
+```json
+{
+  "ChallengeParameters": {},
+  "AuthenticationResult": {
+    "AccessToken": "eyJraWQiOiJ...<ACCESS_TOKEN_HEADER>...eyJ0b2tlbl91c2UiOiJhY2Nlc3Mi...<ACCESS_TOKEN_SIGNATURE>",
+    "ExpiresIn": 900,
+    "TokenType": "Bearer",
+    "RefreshToken": "eyJjdHkiOiJKV1QiLCJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAifQ...<REFRESH_TOKEN>",
+    "IdToken": "eyJraWQiOiJ...<ID_TOKEN_HEADER>...eyJ0b2tlbl91c2UiOiJpZCIsImVtYWlsIjoiY2hld2JhY2NhQGV4YW1wbGUuY29tIn0...<ID_TOKEN_SIGNATURE>"
+  }
+}
+```
+
+> [!note]
+> `ExpiresIn` reflects app client token validity. A 15-minute lab client returns `900`; a default one-hour client can return `3600`.
 
 ### Step 6: Export Tokens
 
@@ -754,6 +838,14 @@ Validation:
 echo "${ACCESS_TOKEN:0:24}"
 echo "${ID_TOKEN:0:24}"
 echo "${REFRESH_TOKEN:0:24}"
+```
+
+Expected:
+
+```text
+eyJraWQiOiJ...<access>
+eyJraWQiOiJ...<id>
+eyJjdHkiOiJKV1QiLCJlbm...<refresh>
 ```
 
 > [!important]
@@ -814,6 +906,8 @@ export COGNITO_AUTHORIZER_ID=$(aws apigatewayv2 create-authorizer \
 
 Test:
 
+This request sends the Cognito access token in the `Authorization` header. HTTP API validates the JWT before Lambda runs, so a successful response proves both the token and route authorizer are wired correctly.
+
 ```bash
 curl -i \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
@@ -824,6 +918,8 @@ curl -i \
 > If HTTP API returns `{"message":"The incoming token has expired"}`, export a fresh `ACCESS_TOKEN` before retesting. API Gateway rejected the request before Lambda ran.
 
 Manual token test:
+
+This is the same test without shell variables. Pasting the access token by hand is useful during the first pass because it reinforces which token belongs in the bearer header.
 
 ```bash
 curl -i \
@@ -896,6 +992,8 @@ aws apigateway create-deployment \
 
 Test:
 
+This request sends the Cognito ID token in the `Authorization` header. In the barebones REST flow, no method scopes are configured, so the Cognito user-pool authorizer can validate the identity token and allow the Lambda integration.
+
 ```bash
 curl -i \
   -H "Authorization: Bearer $ID_TOKEN" \
@@ -906,6 +1004,8 @@ curl -i \
 > If REST API returns `{"message":"The incoming token has expired"}`, export a fresh `ID_TOKEN` before retesting. API Gateway rejected the request before Lambda ran.
 
 Manual token test:
+
+This is the same REST test without shell variables. Pasting the ID token by hand makes the token choice explicit before switching back to the export-driven path.
 
 ```bash
 curl -i \
