@@ -221,7 +221,7 @@ Console path: **Lambda** -> **Create function** -> **Author from scratch**. Use 
 
 Keep these values handy for API Gateway integration:
 
-| Value | Console source | Lab value |
+| Parameter | Console Location | Value |
 | --- | --- | --- |
 | Jedi function name | Lambda function overview | `chewbacca-auth-http-jedi-python` |
 | Jedi function ARN | Lambda function overview -> **Function ARN** | `<JEDI_FUNCTION_ARN>` |
@@ -330,7 +330,7 @@ Console path: **API Gateway** -> **Create API** -> **HTTP API** -> API name from
 
 Keep these values handy for route tests and authorizer setup:
 
-| Value | Console source | Lab value |
+| Parameter | Console Location | Value |
 | --- | --- | --- |
 | API name | API Gateway HTTP API details | `chewbacca-auth-http-api` |
 | API ID | API Gateway HTTP API details | `<API_ID>` |
@@ -471,7 +471,7 @@ Console path: **Amazon Cognito** -> **User pools** -> **Create user pool**. Use 
 
 Keep these values handy for app client setup, authorizer setup, and CLI authentication:
 
-| Value | Console source | Lab value |
+| Parameter | Console Location | Value |
 | --- | --- | --- |
 | User pool name | Cognito user pool details | `chewbacca-auth-http-users` |
 | User pool ID | Cognito user pool details | `<USER_POOL_ID>` |
@@ -542,7 +542,7 @@ Console path: open the user pool -> **App clients** -> **Create app client**. En
 
 Keep these values handy for `SECRET_HASH`, manual authentication, and the export-driven run:
 
-| Value | Console source | Lab value |
+| Parameter | Console Location | Value |
 | --- | --- | --- |
 | App client name | Cognito app client details | `chewbacca-auth-http-cli-client` |
 | Client ID | Cognito app client details | `<CLIENT_ID>` |
@@ -600,7 +600,7 @@ Console path: open the user pool -> **Users** -> **Create user**. Use the userna
 
 Keep these values handy for the manual authentication run:
 
-| Value | Console source | Lab value |
+| Parameter | Console Location | Value |
 | --- | --- | --- |
 | Username | Cognito user details | `chewbacca` |
 | Email | Cognito user attributes | `chewbacca@example.com` |
@@ -1009,7 +1009,7 @@ Console path: open the HTTP API -> **Authorization** -> **Manage authorizers** -
 
 Keep these values handy for validation and troubleshooting:
 
-| Value | Console source | Lab value |
+| Parameter | Console Location | Value |
 | --- | --- | --- |
 | Authorizer name | HTTP API authorizer details | `chewbacca-auth-http-cognito-jwt` |
 | Authorizer ID | HTTP API authorizer details | `<COGNITO_AUTHORIZER_ID>` |

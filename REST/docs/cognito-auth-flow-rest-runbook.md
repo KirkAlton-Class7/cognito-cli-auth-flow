@@ -221,7 +221,7 @@ Console path: **Lambda** -> **Create function** -> **Author from scratch**. Use 
 
 Keep these values handy for API Gateway integration:
 
-| Value | Console source | Lab value |
+| Parameter | Console Location | Value |
 | --- | --- | --- |
 | Jedi function name | Lambda function overview | `chewbacca-auth-rest-jedi-python` |
 | Jedi function ARN | Lambda function overview -> **Function ARN** | `<JEDI_FUNCTION_ARN>` |
@@ -330,7 +330,7 @@ Console path: **API Gateway** -> **Create API** -> **REST API** -> **Build** -> 
 
 Keep these values handy for resources, methods, deployment, and teardown:
 
-| Value | Console source | Lab value |
+| Parameter | Console Location | Value |
 | --- | --- | --- |
 | REST API name | API Gateway REST API details | `chewbacca-auth-rest-api` |
 | REST API ID | API Gateway REST API details | `<REST_API_ID>` |
@@ -394,7 +394,7 @@ In the console, create `/jedi` and `/sith` resources, add `GET` methods, use Lam
 
 Keep these values handy for method authorization and route testing:
 
-| Value | Console source | Lab value |
+| Parameter | Console Location | Value |
 | --- | --- | --- |
 | Jedi resource path | API Gateway resources | `/jedi` |
 | Jedi resource ID | API Gateway resources or CLI lookup | `<JEDI_RESOURCE_ID>` |
@@ -509,7 +509,7 @@ Console path: **Amazon Cognito** -> **User pools** -> **Create user pool**. Use 
 
 Keep these values handy for app client setup, authorizer setup, and CLI authentication:
 
-| Value | Console source | Lab value |
+| Parameter | Console Location | Value |
 | --- | --- | --- |
 | User pool name | Cognito user pool details | `chewbacca-auth-rest-users` |
 | User pool ID | Cognito user pool details | `<USER_POOL_ID>` |
@@ -583,7 +583,7 @@ Console path: open the user pool -> **App clients** -> **Create app client**. En
 
 Keep these values handy for `SECRET_HASH`, manual authentication, and the export-driven run:
 
-| Value | Console source | Lab value |
+| Parameter | Console Location | Value |
 | --- | --- | --- |
 | App client name | Cognito app client details | `chewbacca-auth-rest-cli-client` |
 | Client ID | Cognito app client details | `<CLIENT_ID>` |
@@ -641,7 +641,7 @@ Console path: open the user pool -> **Users** -> **Create user**. Use the userna
 
 Keep these values handy for the manual authentication run:
 
-| Value | Console source | Lab value |
+| Parameter | Console Location | Value |
 | --- | --- | --- |
 | Username | Cognito user details | `chewbacca` |
 | Email | Cognito user attributes | `chewbacca@example.com` |
@@ -1051,7 +1051,7 @@ Console path: open the REST API -> **Authorizers** -> **Create authorizer**. Use
 
 Keep these values handy for validation and troubleshooting:
 
-| Value | Console source | Lab value |
+| Parameter | Console Location | Value |
 | --- | --- | --- |
 | Authorizer name | REST API authorizer details | `chewbacca-auth-rest-cognito-authorizer` |
 | Authorizer ID | REST API authorizer details | `<COGNITO_AUTHORIZER_ID>` |
