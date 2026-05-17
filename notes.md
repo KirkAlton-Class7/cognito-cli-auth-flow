@@ -762,8 +762,18 @@ The final response contains `AccessToken`, `IdToken`, and `RefreshToken`. Copy t
 > The export-driven pass assumes the setup variables still exist in the shell. If you start a new terminal, reload `LAB_REPO`, `AWS_REGION`, `CLIENT_ID`, `CLIENT_SECRET`, `TEST_USERNAME`, and `TEST_PASSWORD` before generating `SECRET_HASH`. Pull `CLIENT_ID` and `CLIENT_SECRET` from the Cognito app client, and only echo a short prefix of `CLIENT_SECRET` when validating.
 
 ```bash
-cd "<PATH_TO_COGNITO_CLI_AUTH_FLOW_REPO>"
-export LAB_REPO="$(pwd)"
+export LAB_REPO="<COGNITO_CLI_AUTH_FLOW_REPO_ROOT>"
+cd "$LAB_REPO"
+```
+
+Example:
+
+```bash
+export LAB_REPO="/Users/kirk/Codex/sandbox/cognito-cli-auth-flow"
+cd "$LAB_REPO"
+```
+
+```bash
 export AWS_REGION="us-west-2"
 export CLIENT_ID="<CLIENT_ID>"
 export CLIENT_SECRET="<CLIENT_SECRET>"

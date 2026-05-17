@@ -102,7 +102,14 @@ aws sts get-caller-identity
 Set the working directory:
 
 ```bash
-export LAB_REPO="$HOME/cognito-cli-auth-flow"
+export LAB_REPO="<COGNITO_CLI_AUTH_FLOW_REPO_ROOT>"
+cd "$LAB_REPO"
+```
+
+Example:
+
+```bash
+export LAB_REPO="/Users/kirk/Codex/sandbox/cognito-cli-auth-flow"
 cd "$LAB_REPO"
 ```
 
@@ -884,18 +891,30 @@ After completing the manual run, repeat the same authentication flow with shell 
 
 | Parameter | Console Location | Value |
 | --- | --- | --- |
-| Lab repo path | Local terminal | `<PATH_TO_COGNITO_CLI_AUTH_FLOW_REPO>` |
+| Lab repo path | Local terminal | `<COGNITO_CLI_AUTH_FLOW_REPO_ROOT>` |
 | AWS region | AWS Console region selector | `us-west-2` |
 | App client ID | Cognito user pool -> App clients -> `<APP_CLIENT_NAME>` | `<CLIENT_ID>` |
 | App client secret | Cognito user pool -> App clients -> `<APP_CLIENT_NAME>` -> show client secret | `<CLIENT_SECRET>` |
 | Test username | Cognito user pool -> Users -> user details | `chewbacca` |
 | Test password | Password set during user creation/reset | `<USER_PASSWORD>` |
 
-Export the values:
+Set the working directory:
 
 ```bash
-cd "<PATH_TO_COGNITO_CLI_AUTH_FLOW_REPO>"
-export LAB_REPO="$(pwd)"
+export LAB_REPO="<COGNITO_CLI_AUTH_FLOW_REPO_ROOT>"
+cd "$LAB_REPO"
+```
+
+Example:
+
+```bash
+export LAB_REPO="/Users/kirk/Codex/sandbox/cognito-cli-auth-flow"
+cd "$LAB_REPO"
+```
+
+Export the remaining values:
+
+```bash
 export AWS_REGION="us-west-2"
 export CLIENT_ID="<CLIENT_ID>"
 export CLIENT_SECRET="<CLIENT_SECRET>"
