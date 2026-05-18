@@ -1,6 +1,6 @@
 # Chewbacca Auth Flow - REST Architecture
 
-The REST version uses API Gateway REST API resources and methods with a native Cognito User Pool authorizer. Cognito still owns the user authentication flow; API Gateway validates the token before invoking Lambda.
+The REST version uses API Gateway REST API resources and methods with a native Cognito User Pool authorizer. Cognito owns the user authentication flow. API Gateway validates the token before invoking Lambda.
 
 ```text
 Chewbacca CLI

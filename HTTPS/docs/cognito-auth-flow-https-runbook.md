@@ -47,7 +47,7 @@ Export pass:
 > CLI blocks in the infrastructure sections are equivalent reference commands. The intended lab flow is console setup first, then CLI authentication and validation.
 
 > [!IMPORTANT]
-> Do the manual CLI pass first. Copying challenge `Session` values by hand is not busywork here; it is the fastest way to understand how Cognito moves from `SELECT_CHALLENGE` to `PASSWORD` to `SOFTWARE_TOKEN_MFA`. After that, use the export path to repeat the flow quickly.
+> Do the manual CLI pass first. Copy challenge `Session` values by hand so the Cognito sequence is visible: `SELECT_CHALLENGE` -> `PASSWORD` -> `SOFTWARE_TOKEN_MFA`. After that, use the export path for repeatable testing.
 
 ## What You Build
 
@@ -64,7 +64,7 @@ CLI user
   -> CloudWatch Logs
 ```
 
-The point is not to build a full application. The point is to see each authentication step clearly.
+This lab keeps the application small so each authentication step stays visible.
 
 The API routes are intentionally simple:
 
@@ -704,7 +704,7 @@ Authenticate once with direct username-password auth to begin initial TOTP MFA s
 > [!NOTE]
 > Run this initial setup step only for a fresh test user that has not enrolled an authenticator app yet. If MFA is already enrolled, skip to **12.3 Manual Check: Start `USER_AUTH`**.
 
-This `initiate-auth` call starts a username-password sign-in with the password sent in the request. In this initial setup pass, the goal is not to study challenge negotiation yet; it is to get a short-lived access token that can authorize the user's software-token MFA enrollment.
+This `initiate-auth` call starts a username-password sign-in with the password sent in the request. This setup pass gets a short-lived access token for software-token MFA enrollment. Challenge negotiation starts in **12.3 Manual Check: Start `USER_AUTH`**.
 
 ```bash
 aws cognito-idp initiate-auth \
@@ -732,7 +732,7 @@ Expected output:
 > [!NOTE]
 > `ExpiresIn` follows the app client token validity. If the app client is still at the default one-hour validity, this value can appear as `3600` instead of `900`.
 
-Use the temporary access token to request a software-token secret. `associate-software-token` begins TOTP setup and asks Cognito to generate the private key that your authenticator app will use. Cognito allows this call with either a signed-in user's access token or a valid challenge session; this lab uses the access token because it makes the bootstrap path easier to see.
+Use the temporary access token to request a software-token secret. `associate-software-token` begins TOTP setup and asks Cognito to generate the private key that your authenticator app will use. Cognito allows this call with either a signed-in user's access token or a valid challenge session. This lab uses the access token for a clearer setup path.
 
 ```bash
 aws cognito-idp associate-software-token \
@@ -884,7 +884,7 @@ For the HTTP API route test, copy `<ACCESS_TOKEN>`.
 
 ## 13. Export-Driven Authentication Run
 
-After completing the manual run, repeat the same authentication flow with shell exports. This pass is for repeatability and easier test reuse.
+After completing the manual run, repeat the same authentication flow with shell exports. This pass improves repeatability and future test reuse.
 
 > [!IMPORTANT]
 > If you are continuing in the same terminal session from the manual run and your variables are still set, continue directly to **13.1 Export `SECRET_HASH`**. If you opened a new terminal, skipped the manual run, or are returning later, collect the values below from the AWS Console and export them before continuing.
@@ -958,7 +958,7 @@ Expected output:
 
 ### 13.2 Export Run: Start `USER_AUTH`
 
-This repeats the choice-based `USER_AUTH` start step and stores Cognito's raw response. The important output is still the challenge `Session`; the export path simply lets `jq` carry it forward instead of copying it by hand.
+This repeats the choice-based `USER_AUTH` start step and stores Cognito's raw response. The challenge `Session` remains the important output. `jq` carries it forward instead of manual copying.
 
 ```bash
 export AUTH_RESPONSE=$(aws cognito-idp initiate-auth \
@@ -1041,7 +1041,7 @@ export TOTP_CODE="123456"
 
 Respond to the MFA challenge:
 
-This command completes the exported challenge chain. It sends the current TOTP code with the latest `Session`; when Cognito accepts the MFA code, the response changes from another challenge to `AuthenticationResult`.
+This command completes the exported challenge chain. It sends the current TOTP code with the latest `Session`. When Cognito accepts the MFA code, the response changes from another challenge to `AuthenticationResult`.
 
 ```bash
 export MFA_RESPONSE=$(aws cognito-idp respond-to-auth-challenge \
@@ -1098,7 +1098,7 @@ eyJjdHkiOiJKV1QiLCJlbmMi
 | --- | --- | --- |
 | Access token | Permission to call APIs | Use with API Gateway JWT authorizer |
 | ID token | User identity/profile claims | Useful for inspecting user identity |
-| Refresh token | Used to request new tokens | Keep private; do not send to API Gateway |
+| Refresh token | Used to request new tokens | Keep private. Do not send to API Gateway |
 
 For API testing, use:
 
@@ -1239,7 +1239,7 @@ HTTP/2 200
 
 Export Run: test the Sith route:
 
-This checks that the same authorizer behavior is attached consistently to the second protected route, not just to `/jedi`.
+This confirms the authorizer is attached to both protected routes.
 
 ```bash
 curl -i \
@@ -1264,7 +1264,7 @@ Validation:
 
 After MFA is enabled, `USER_PASSWORD_AUTH` skips `SELECT_CHALLENGE` and goes straight to password validation, then MFA.
 
-Use this shortcut only after the manual learning pass. It is the same `initiate-auth` API, but with `USER_PASSWORD_AUTH` instead of `USER_AUTH`; that means the password is submitted immediately and Cognito can respond directly with the MFA challenge.
+Use this shortcut after the manual learning pass. `USER_PASSWORD_AUTH` submits the password immediately, so Cognito can respond directly with the MFA challenge.
 
 ```bash
 export DIRECT_AUTH_RESPONSE=$(aws cognito-idp initiate-auth \
@@ -1294,7 +1294,7 @@ This is simpler for CLI testing, but it does not teach the `SELECT_CHALLENGE` ne
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
 | `Unable to verify secret hash` | Wrong username, client ID, client secret, or copied hash | Regenerate `SECRET_HASH` with the exact same username used in the auth request |
-| `InvalidParameterException` for `USER_AUTH` | App client does not allow `ALLOW_USER_AUTH` or region/account does not support choice-based auth | Recreate/update app client with `ALLOW_USER_AUTH`; use `USER_PASSWORD_AUTH` if unavailable |
+| `InvalidParameterException` for `USER_AUTH` | App client does not allow `ALLOW_USER_AUTH` or region/account does not support choice-based auth | Recreate/update app client with `ALLOW_USER_AUTH`. Use `USER_PASSWORD_AUTH` if unavailable |
 | `Invalid session due to a mismatched auth flow` | The `Session` came from the wrong auth flow, an older challenge chain, another app client, or another user | Restart from `initiate-auth --auth-flow USER_AUTH`, copy the fresh `SELECT_CHALLENGE` session, then use the new MFA session returned by the password step |
 | `NotAuthorizedException` | Wrong password, stale session, wrong secret hash, or expired MFA step | Start the flow again from `initiate-auth` |
 | `CodeMismatchException` | MFA code expired or copied incorrectly | Wait for a fresh authenticator code |

@@ -11,7 +11,7 @@ Lambda only runs after authorization succeeds
 CloudWatch proves the request path
 ```
 
-This is not a full fledged serverless application. It is small identity lab that explains the moving parts underneath larger serverless authentication designs.
+This is a small identity lab that explains the core parts used in larger serverless authentication designs.
 
 ## Links
 
@@ -22,9 +22,9 @@ This is not a full fledged serverless application. It is small identity lab that
 - [[class7_advanced/tawny-port-serverless-infra-advanced-note]]
 - [[aws/real-world-patterns-for-aws-lambda]]
 
-## Resource Links
+## Resource Map
 
-Keep these close while studying the CLI flow. The CLI commands make more sense when the official Cognito challenge model is nearby.
+Keep these close while studying the CLI flow and completing the Cognito authentication lab.
 
 | Topic | Resource |
 | --- | --- |
@@ -46,7 +46,7 @@ Keep these close while studying the CLI flow. The CLI commands make more sense w
 
 ### AWS CLI Command References
 
-These are the direct AWS CLI command reference pages for the commands used in the lab notes.
+These are the direct AWS CLI command reference pages for the commands used in the lab.
 
 | Command | AWS CLI reference |
 | --- | --- |
@@ -123,7 +123,7 @@ CloudWatch shows what actually happened.
 ```
 
 > [!important]
-> The most important learning outcome is not the Chewbacca/Jedi/Sith theme. It is understanding which system owns each responsibility: Cognito issues tokens, API Gateway validates tokens, Lambda handles business logic, and CloudWatch confirms runtime behavior.
+> Know each system boundary. Cognito issues tokens. API Gateway validates tokens. Lambda handles business logic. CloudWatch confirms runtime behavior.
 
 ## Architecture Overview
 
@@ -302,7 +302,7 @@ username + app client ID
 Cognito requires this when the app client has a client secret.
 
 > [!warning]
-> `SECRET_HASH` is not your raw client secret. It is a derived proof that lets Cognito verify that the caller knows the app client secret.
+> `SECRET_HASH` is a value that is used to prove the caller knows the app client secret.
 
 Helper script:
 
@@ -345,7 +345,7 @@ Run the CLI authentication workflow in two modes:
 | Export-driven pass | Repeat the flow quickly | Capture responses with `export`, parse values with `jq`, and reuse tokens in curl commands |
 
 > [!important]
-> The manual pass matters. Cognito's `Session` value changes as the flow moves from `SELECT_CHALLENGE` to `PASSWORD` to `SOFTWARE_TOKEN_MFA`. Copying those values by hand once or twice makes the sequence much easier to remember later.
+> The manual pass matters. Cognito's `Session` value changes as the flow moves from `SELECT_CHALLENGE` to `PASSWORD` to `SOFTWARE_TOKEN_MFA`. Copying those values manually once or twice makes the sequence much easier to remember later.
 
 ### 1. Export Base Values For CLI Testing
 
@@ -670,7 +670,7 @@ Resource links for this section: [AWS CLI initiate-auth](https://docs.aws.amazon
 
 Run this once without assigning responses to variables. The goal is to see the challenge sequence plainly.
 
-`USER_AUTH` starts Cognito's choice-based authentication flow. The first request identifies the user and asks Cognito which sign-in methods are available; Cognito responds with `SELECT_CHALLENGE` and a session value that preserves the challenge state.
+`USER_AUTH` starts Cognito's choice-based authentication flow. The first request identifies the user and asks Cognito which sign-in methods are available. Cognito responds with `SELECT_CHALLENGE` and a session value that preserves the challenge state.
 
 ```bash
 aws cognito-idp initiate-auth \
@@ -728,7 +728,7 @@ Copy the new `Session` from the `SOFTWARE_TOKEN_MFA` response. Then use a fresh 
 > [!warning]
 > Do not reuse the earlier `SELECT_CHALLENGE` session for MFA. The password challenge returns a new `Session`, and that new value is the only valid handoff into `SOFTWARE_TOKEN_MFA`.
 
-The next `respond-to-auth-challenge` call answers the MFA prompt. The session must come from the password step, and the TOTP code must be current; when Cognito accepts it, the response contains tokens instead of another challenge.
+The next `respond-to-auth-challenge` call answers the MFA prompt. The session must come from the password step, and the TOTP code must be current. When Cognito accepts it, the response contains tokens instead of another challenge.
 
 ```bash
 aws cognito-idp respond-to-auth-challenge \
@@ -857,7 +857,7 @@ export SESSION=$(echo "$PASSWORD_CHALLENGE_RESPONSE" | jq -r '.Session')
 
 ### Step 5: Respond To MFA
 
-This completes the exported challenge chain. The current TOTP code and latest `Session` are submitted together; success returns `AuthenticationResult` with the lab tokens.
+This completes the exported challenge chain. The current TOTP code and latest `Session` are submitted together. A successful response returns `AuthenticationResult` with the lab tokens.
 
 ```bash
 export TOTP_CODE="123456"
@@ -886,7 +886,7 @@ Expected:
 ```
 
 > [!note]
-> `ExpiresIn` reflects app client token validity. A 15-minute lab client returns `900`; a default one-hour client can return `3600`.
+> `ExpiresIn` reflects app client token validity. A 15-minute lab client returns `900`. A default one-hour client can return `3600`.
 
 ### Step 6: Export Tokens
 
@@ -932,8 +932,8 @@ eyJjdHkiOiJKV1QiLCJlbmMi
 | --- | --- | --- |
 | MFA enrollment `ACCESS_TOKEN` | `associate-software-token`, `verify-software-token`, `set-user-mfa-preference` | Re-run the direct `USER_PASSWORD_AUTH` command and export a new temporary `ACCESS_TOKEN` |
 | Cognito challenge `SESSION` | `SELECT_CHALLENGE` and `SOFTWARE_TOKEN_MFA` responses | Restart the `USER_AUTH` flow from `initiate-auth` |
-| API route token | HTTP API `ACCESS_TOKEN` or REST API `ID_TOKEN` | Expires after 15 minutes; re-run the auth flow, export a fresh token, and retry curl |
-| Refresh token | Token renewal workflows outside this barebones lab | Keep private; do not send it to API Gateway |
+| API route token | HTTP API `ACCESS_TOKEN` or REST API `ID_TOKEN` | Expires after 15 minutes. Re-run the auth flow, export a fresh token, and retry curl |
+| Refresh token | Token renewal workflows outside this lab | Keep private. Do not send it to API Gateway |
 
 ## HTTP API Protected Route Pattern
 
