@@ -26,6 +26,15 @@ HTTP API JWT authorizer
 Use the **CLI** after the console build to test authentication. Run it in two passes:
 
 ```text
+Public route check:
+  call /jedi and /sith before attaching the authorizer
+  confirm both routes return 200 and Lambda logs appear
+
+Authorizer enforcement check:
+  attach the JWT authorizer
+  call /jedi without a token
+  confirm API Gateway returns 401 and Lambda does not run
+
 Manual pass:
   generate SECRET_HASH
   run USER_AUTH
@@ -40,7 +49,7 @@ Export pass:
   export generated IDs and names
   export Session values
   export JWT tokens
-  call protected routes with curl
+  call protected routes with fresh tokens
 ```
 
 > [!NOTE]
@@ -450,9 +459,11 @@ aws lambda add-permission \
   --region "$AWS_REGION"
 ```
 
-## 8. Test the Public API Before Auth
+## 8. Test the Public API Before Authorizer
 
-Before adding Cognito, prove routing works.
+Before adding the authorizer, prove routing works. These requests should return `200` and create Lambda logs.
+
+This checkpoint proves the HTTP API route, Lambda integration, Lambda permission, and function code work before authorization is added.
 
 ```bash
 curl "${API_ENDPOINT}/prod/jedi?name=Chewbacca"
@@ -652,7 +663,105 @@ aws cognito-idp admin-get-user \
   --query '{Username:Username,Status:UserStatus,Enabled:Enabled}'
 ```
 
-## 12. Manual Authentication Run
+## 12. Add the Cognito JWT Authorizer
+
+Create the HTTP API JWT authorizer:
+
+Console path: open the HTTP API -> **Authorization** -> **Manage authorizers** -> **Create**. Use a JWT authorizer with issuer `COGNITO_ISSUER`, audience `CLIENT_ID`, and identity source `$request.header.Authorization`. Attach it to `GET /jedi` and `GET /sith`.
+
+> [!IMPORTANT]
+> Keep these values handy for validation and troubleshooting:
+
+| Parameter | Console Location | Value |
+| --- | --- | --- |
+| Authorizer name | HTTP API authorizer details | `chewbacca-auth-http-cognito-jwt` |
+| Authorizer ID | HTTP API authorizer details | `<COGNITO_AUTHORIZER_ID>` |
+| Issuer | Cognito user pool issuer URL | `<COGNITO_ISSUER>` |
+| Audience | Cognito app client ID | `<CLIENT_ID>` |
+| Identity source | Authorizer identity source | `$request.header.Authorization` |
+
+Equivalent CLI reference:
+
+```bash
+export COGNITO_AUTHORIZER_ID=$(aws apigatewayv2 create-authorizer \
+  --api-id "$API_ID" \
+  --name "$AUTHORIZER_NAME" \
+  --authorizer-type JWT \
+  --identity-source '$request.header.Authorization' \
+  --jwt-configuration "{\"Audience\":[\"${CLIENT_ID}\"],\"Issuer\":\"${COGNITO_ISSUER}\"}" \
+  --query 'AuthorizerId' \
+  --output text \
+  --region "$AWS_REGION")
+```
+
+Export route IDs:
+
+```bash
+export JEDI_ROUTE_ID=$(aws apigatewayv2 get-routes \
+  --api-id "$API_ID" \
+  --query "Items[?RouteKey=='GET /jedi'].RouteId | [0]" \
+  --output text \
+  --region "$AWS_REGION")
+
+export SITH_ROUTE_ID=$(aws apigatewayv2 get-routes \
+  --api-id "$API_ID" \
+  --query "Items[?RouteKey=='GET /sith'].RouteId | [0]" \
+  --output text \
+  --region "$AWS_REGION")
+```
+
+Attach the authorizer to both routes:
+
+```bash
+aws apigatewayv2 update-route \
+  --api-id "$API_ID" \
+  --route-id "$JEDI_ROUTE_ID" \
+  --authorization-type JWT \
+  --authorizer-id "$COGNITO_AUTHORIZER_ID" \
+  --region "$AWS_REGION"
+
+aws apigatewayv2 update-route \
+  --api-id "$API_ID" \
+  --route-id "$SITH_ROUTE_ID" \
+  --authorization-type JWT \
+  --authorizer-id "$COGNITO_AUTHORIZER_ID" \
+  --region "$AWS_REGION"
+```
+
+Validation:
+
+```bash
+aws apigatewayv2 get-authorizer \
+  --api-id "$API_ID" \
+  --authorizer-id "$COGNITO_AUTHORIZER_ID" \
+  --region "$AWS_REGION"
+```
+
+## 13. Test JWT Enforcement Without A Token
+
+Test the protected route before generating a fresh token. This request intentionally omits the `Authorization` header. API Gateway should reject it at the JWT authorizer layer before Lambda runs.
+
+```bash
+curl -i "${API_ENDPOINT}/prod/jedi?name=Chewbacca"
+```
+
+Expected output:
+
+```text
+HTTP/2 401
+content-type: application/json
+...
+
+{"message":"Unauthorized"}
+```
+
+Validation:
+
+- Missing token returns `401`.
+- Lambda logs do not appear for the denied request.
+- If the request still returns `200`, the authorizer is not attached to the route or the latest API configuration is not active.
+
+## 14. Manual Authentication Run
 
 Run the full authentication flow manually first. Do not use shell variables in this pass. The point is to see the values Cognito returns and move them into the next request yourself.
 
@@ -676,7 +785,7 @@ Use these placeholders in the manual commands:
 > [!IMPORTANT]
 > Complete this manual run before using the export-driven run. Copying the two different `Session` values by hand is what makes the Cognito challenge sequence visible.
 
-### 12.1 Manual Check: Generate `SECRET_HASH`
+### 14.1 Manual Check: Generate `SECRET_HASH`
 
 `SECRET_HASH` is the client-secret proof that Cognito expects when an app client has a secret. The helper calculates the HMAC value from the username, app client ID, and client secret so the manual CLI requests match Cognito's documented `SECRET_HASH` requirement.
 
@@ -697,14 +806,14 @@ Expected output:
 > [!IMPORTANT]
 > Copy that output and use it as `<SECRET_HASH>` in the next manual commands.
 
-### 12.2 Initial TOTP MFA Setup
+### 14.2 Initial TOTP MFA Setup
 
 Authenticate once with direct username-password auth to begin initial TOTP MFA setup. MFA is optional at this point, so Cognito should return temporary tokens.
 
 > [!NOTE]
-> Run this initial setup step only for a fresh test user that has not enrolled an authenticator app yet. If MFA is already enrolled, skip to **12.3 Manual Check: Start `USER_AUTH`**.
+> Run this initial setup step only for a fresh test user that has not enrolled an authenticator app yet. If MFA is already enrolled, skip to **14.3 Manual Check: Start `USER_AUTH`**.
 
-This `initiate-auth` call starts a username-password sign-in with the password sent in the request. This setup pass gets a short-lived access token for software-token MFA enrollment. Challenge negotiation starts in **12.3 Manual Check: Start `USER_AUTH`**.
+This `initiate-auth` call starts a username-password sign-in with the password sent in the request. This setup pass gets a short-lived access token for software-token MFA enrollment. Challenge negotiation starts in **14.3 Manual Check: Start `USER_AUTH`**.
 
 ```bash
 aws cognito-idp initiate-auth \
@@ -784,7 +893,7 @@ No output means the preference update succeeded.
 > [!IMPORTANT]
 > `<TEMP_ACCESS_TOKEN>` is only for MFA enrollment. If this token expires during setup, run the direct password auth command again and use the new access token.
 
-### 12.3 Manual Check: Start `USER_AUTH`
+### 14.3 Manual Check: Start `USER_AUTH`
 
 `USER_AUTH` starts Cognito's choice-based authentication flow. Instead of sending the password immediately, the client identifies the user and asks Cognito which sign-in challenges are available. Cognito should answer with `SELECT_CHALLENGE` and a `Session` value that must be carried into the next command.
 
@@ -813,9 +922,9 @@ Expected output:
 Copy `<SELECT_CHALLENGE_SESSION>` into the next command.
 
 > [!WARNING]
-> A Cognito `Session` belongs to one specific challenge chain. If you answer `SELECT_CHALLENGE` with a session from `USER_PASSWORD_AUTH`, an older run, another app client, or another user, Cognito can return `Invalid session due to a mismatched auth flow`. Restart from **12.3 Manual Check: Start `USER_AUTH`** and copy the fresh `Session` from that response.
+> A Cognito `Session` belongs to one specific challenge chain. If you answer `SELECT_CHALLENGE` with a session from `USER_PASSWORD_AUTH`, an older run, another app client, or another user, Cognito can return `Invalid session due to a mismatched auth flow`. Restart from **14.3 Manual Check: Start `USER_AUTH`** and copy the fresh `Session` from that response.
 
-### 12.4 Manual Check: Choose `PASSWORD`
+### 14.4 Manual Check: Choose `PASSWORD`
 
 `respond-to-auth-challenge` answers the `SELECT_CHALLENGE` prompt. In this step, `ANSWER="PASSWORD"` tells Cognito which available sign-in method to use, and the same request supplies the password. If the primary factor succeeds and MFA is enabled, Cognito returns the next challenge plus a new `Session`.
 
@@ -846,7 +955,7 @@ Copy `<SOFTWARE_TOKEN_MFA_SESSION>` into the next command.
 > [!WARNING]
 > Do not reuse the earlier `SELECT_CHALLENGE` session for MFA. The password challenge returns a new `Session`, and that new value is the only valid handoff into `SOFTWARE_TOKEN_MFA`.
 
-### 12.5 Manual Check: Respond To `SOFTWARE_TOKEN_MFA`
+### 14.5 Manual Check: Respond To `SOFTWARE_TOKEN_MFA`
 
 This second `respond-to-auth-challenge` call answers the MFA prompt. The `Session` must be the one returned by the password step, and the MFA code must be current. A successful response ends the challenge chain and returns the Cognito token set.
 
@@ -877,17 +986,17 @@ Expected output:
 > [!NOTE]
 > The real response contains full JWT/JWE strings. The examples shorten tokens for readability, while preserving their overall structure.
 
-For the HTTP API route test, copy `<ACCESS_TOKEN>`.
+For the HTTP API route test, copy `<ACCESS_TOKEN>`. The authorizer is already attached, so use this token in **Step 17** before it expires.
 
 > [!WARNING]
-> Cognito challenge sessions are short-lived. If too much time passes between manual commands, restart from **12.3 Manual Check: Start `USER_AUTH`**.
+> Cognito challenge sessions are short-lived. If too much time passes between manual commands, restart from **14.3 Manual Check: Start `USER_AUTH`**.
 
-## 13. Export-Driven Authentication Run
+## 15. Export-Driven Authentication Run
 
 After completing the manual run, repeat the same authentication flow with shell exports. This pass improves repeatability and future test reuse.
 
 > [!IMPORTANT]
-> If you are continuing in the same terminal session from the manual run and your variables are still set, continue directly to **13.1 Export `SECRET_HASH`**. If you opened a new terminal, skipped the manual run, or are returning later, collect the values below from the AWS Console and export them before continuing.
+> If you are continuing in the same terminal session from the manual run and your variables are still set, continue directly to **15.1 Export `SECRET_HASH`**. If you opened a new terminal, skipped the manual run, or are returning later, collect the values below from the AWS Console and export them before continuing.
 
 | Parameter | Console Location | Value |
 | --- | --- | --- |
@@ -935,7 +1044,7 @@ echo "$TEST_USERNAME"
 > [!CAUTION]
 > Do not print the full `CLIENT_SECRET` in shared terminals, screenshots, commits, or notes. Show only a short prefix when validating that the variable is loaded.
 
-### 13.1 Export `SECRET_HASH`
+### 15.1 Export `SECRET_HASH`
 
 This is the same client-secret proof from the manual pass, stored in a shell variable so the remaining commands can be repeated quickly without recopying the hash.
 
@@ -956,7 +1065,7 @@ Expected output:
 <first-20-characters-of-secret-hash>
 ```
 
-### 13.2 Export Run: Start `USER_AUTH`
+### 15.2 Export Run: Start `USER_AUTH`
 
 This repeats the choice-based `USER_AUTH` start step and stores Cognito's raw response. The challenge `Session` remains the important output. `jq` carries it forward instead of manual copying.
 
@@ -997,7 +1106,7 @@ Expected output:
 AYABeMud54rEoSpP-o6C
 ```
 
-### 13.3 Export Run: Choose `PASSWORD`
+### 15.3 Export Run: Choose `PASSWORD`
 
 This answers `SELECT_CHALLENGE` with the password method and captures the next response. If password validation succeeds, Cognito moves the flow to `SOFTWARE_TOKEN_MFA` and returns a replacement session for the MFA step.
 
@@ -1031,7 +1140,7 @@ Export the new session:
 export SESSION=$(echo "$PASSWORD_CHALLENGE_RESPONSE" | jq -r '.Session')
 ```
 
-### 13.4 Export Run: Respond To `SOFTWARE_TOKEN_MFA`
+### 15.4 Export Run: Respond To `SOFTWARE_TOKEN_MFA`
 
 Get a fresh code from the authenticator app:
 
@@ -1092,7 +1201,7 @@ eyJjdHkiOiJKV1QiLCJlbmMi
 > [!IMPORTANT]
 > Access tokens expire after 15 minutes in this lab. If API Gateway later returns `{"message":"The incoming token has expired"}` or a `401`, rerun the export-driven authentication flow and retry with a fresh `ACCESS_TOKEN`.
 
-## 14. Token Use
+## 16. Token Use
 
 | Token | What it represents | Use in this lab |
 | --- | --- | --- |
@@ -1106,101 +1215,9 @@ For API testing, use:
 Authorization: Bearer $ACCESS_TOKEN
 ```
 
-## 15. Add the Cognito JWT Authorizer
+## 17. Test Protected API Routes With A Fresh Token
 
-Create the HTTP API JWT authorizer:
-
-Console path: open the HTTP API -> **Authorization** -> **Manage authorizers** -> **Create**. Use a JWT authorizer with issuer `COGNITO_ISSUER`, audience `CLIENT_ID`, and identity source `$request.header.Authorization`. Attach it to `GET /jedi` and `GET /sith`.
-
-> [!IMPORTANT]
-> Keep these values handy for validation and troubleshooting:
-
-| Parameter | Console Location | Value |
-| --- | --- | --- |
-| Authorizer name | HTTP API authorizer details | `chewbacca-auth-http-cognito-jwt` |
-| Authorizer ID | HTTP API authorizer details | `<COGNITO_AUTHORIZER_ID>` |
-| Issuer | Cognito user pool issuer URL | `<COGNITO_ISSUER>` |
-| Audience | Cognito app client ID | `<CLIENT_ID>` |
-| Identity source | Authorizer identity source | `$request.header.Authorization` |
-
-Equivalent CLI reference:
-
-```bash
-export COGNITO_AUTHORIZER_ID=$(aws apigatewayv2 create-authorizer \
-  --api-id "$API_ID" \
-  --name "$AUTHORIZER_NAME" \
-  --authorizer-type JWT \
-  --identity-source '$request.header.Authorization' \
-  --jwt-configuration "{\"Audience\":[\"${CLIENT_ID}\"],\"Issuer\":\"${COGNITO_ISSUER}\"}" \
-  --query 'AuthorizerId' \
-  --output text \
-  --region "$AWS_REGION")
-```
-
-Export route IDs:
-
-```bash
-export JEDI_ROUTE_ID=$(aws apigatewayv2 get-routes \
-  --api-id "$API_ID" \
-  --query "Items[?RouteKey=='GET /jedi'].RouteId | [0]" \
-  --output text \
-  --region "$AWS_REGION")
-
-export SITH_ROUTE_ID=$(aws apigatewayv2 get-routes \
-  --api-id "$API_ID" \
-  --query "Items[?RouteKey=='GET /sith'].RouteId | [0]" \
-  --output text \
-  --region "$AWS_REGION")
-```
-
-Attach the authorizer to both routes:
-
-```bash
-aws apigatewayv2 update-route \
-  --api-id "$API_ID" \
-  --route-id "$JEDI_ROUTE_ID" \
-  --authorization-type JWT \
-  --authorizer-id "$COGNITO_AUTHORIZER_ID" \
-  --region "$AWS_REGION"
-
-aws apigatewayv2 update-route \
-  --api-id "$API_ID" \
-  --route-id "$SITH_ROUTE_ID" \
-  --authorization-type JWT \
-  --authorizer-id "$COGNITO_AUTHORIZER_ID" \
-  --region "$AWS_REGION"
-```
-
-Validation:
-
-```bash
-aws apigatewayv2 get-authorizer \
-  --api-id "$API_ID" \
-  --authorizer-id "$COGNITO_AUTHORIZER_ID" \
-  --region "$AWS_REGION"
-```
-
-## 16. Test Protected API Routes
-
-Test without a token:
-
-This request intentionally omits the `Authorization` header. API Gateway should reject it at the JWT authorizer layer before the Lambda function runs, which confirms the route is protected.
-
-```bash
-curl -i "${API_ENDPOINT}/prod/jedi?name=Chewbacca"
-```
-
-Expected:
-
-```text
-HTTP/2 401
-content-type: application/json
-...
-
-{"message":"Unauthorized"}
-```
-
-Manual Check: test the Jedi route with the access token copied from **12.5 Manual Check: Respond To `SOFTWARE_TOKEN_MFA`**. Get `<API_ENDPOINT>` from the HTTP API stage URL.
+Manual Check: test the Jedi route with the access token copied from **14.5 Manual Check: Respond To `SOFTWARE_TOKEN_MFA`**. Get `<API_ENDPOINT>` from the HTTP API stage URL.
 
 This request sends the Cognito access token as a bearer token. HTTP API JWT authorizers validate the token issuer, audience, signature, and expiration before forwarding the request to Lambda.
 
@@ -1235,7 +1252,7 @@ HTTP/2 200
 ```
 
 > [!NOTE]
-> If the response says `The incoming token has expired`, do not chase the Lambda first. API Gateway rejected the request before invocation. Return to **Step 13**, complete the export-driven authentication run again, and retry with the new `ACCESS_TOKEN`.
+> If the response says `The incoming token has expired`, do not chase the Lambda first. API Gateway rejected the request before invocation. Return to **Step 15**, complete the export-driven authentication run again, and retry with the new `ACCESS_TOKEN`.
 
 Export Run: test the Sith route:
 
@@ -1256,11 +1273,12 @@ HTTP/2 200
 
 Validation:
 
-- Missing token returns `401`.
+- Public pre-authorizer test returns `200`.
+- Missing token after authorizer attachment returns `401`.
 - Valid token returns `200`.
 - Lambda logs appear only when authorization succeeds.
 
-## 17. Direct Flow Shortcut
+## 18. Direct Flow Shortcut
 
 After MFA is enabled, `USER_PASSWORD_AUTH` skips `SELECT_CHALLENGE` and goes straight to password validation, then MFA.
 
@@ -1343,6 +1361,7 @@ Every AWS CLI command used in this runbook is linked below to the direct AWS com
 | `aws lambda invoke` | [lambda invoke](https://docs.aws.amazon.com/cli/latest/reference/lambda/invoke.html) |
 | `aws lambda add-permission` | [lambda add-permission](https://docs.aws.amazon.com/cli/latest/reference/lambda/add-permission.html) |
 | `aws lambda delete-function` | [lambda delete-function](https://docs.aws.amazon.com/cli/latest/reference/lambda/delete-function.html) |
+| `aws logs describe-log-groups` | [logs describe-log-groups](https://docs.aws.amazon.com/cli/latest/reference/logs/describe-log-groups.html) |
 | `aws logs delete-log-group` | [logs delete-log-group](https://docs.aws.amazon.com/cli/latest/reference/logs/delete-log-group.html) |
 | `aws apigatewayv2 create-api` | [apigatewayv2 create-api](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/create-api.html) |
 | `aws apigatewayv2 get-api` | [apigatewayv2 get-api](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/get-api.html) |
@@ -1440,6 +1459,8 @@ aws iam delete-role \
 
 Validate teardown:
 
+The API deletion removes HTTP API routes, integrations, stages, and the authorizer. Validate the API itself, then validate each standalone resource that was created outside the API container.
+
 ```bash
 aws apigatewayv2 get-api \
   --api-id "$API_ID" \
@@ -1452,6 +1473,24 @@ aws cognito-idp describe-user-pool \
 aws lambda get-function \
   --function-name "$JEDI_FUNCTION" \
   --region "$AWS_REGION"
+
+aws lambda get-function \
+  --function-name "$SITH_FUNCTION" \
+  --region "$AWS_REGION"
+
+aws logs describe-log-groups \
+  --log-group-name-prefix "/aws/lambda/${JEDI_FUNCTION}" \
+  --region "$AWS_REGION"
+
+aws logs describe-log-groups \
+  --log-group-name-prefix "/aws/lambda/${SITH_FUNCTION}" \
+  --region "$AWS_REGION"
+
+aws iam get-role \
+  --role-name "$LAMBDA_ROLE_NAME"
 ```
 
-Expected result: each validation command should return a not-found style error after teardown.
+Expected result:
+
+- API, Cognito user pool, Lambda functions, and IAM role checks should return not-found style errors.
+- CloudWatch log group checks should return an empty `logGroups` list for each Lambda function.

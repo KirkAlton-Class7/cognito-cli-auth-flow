@@ -341,6 +341,8 @@ Run the CLI authentication workflow in two modes:
 
 | Mode | Purpose | How it should feel |
 | --- | --- | --- |
+| Public route check | Prove the integration before auth | Call `/jedi` and `/sith` before attaching the authorizer and confirm Lambda logs appear |
+| Authorizer enforcement check | Prove API Gateway blocks unauthenticated requests | Attach the authorizer, call `/jedi` without a token, and confirm `401` with no Lambda invocation |
 | Manual-first pass | Understand Cognito challenge mechanics | Read each JSON response, copy `Session` values by hand, paste MFA codes by hand, and inspect tokens before using them |
 | Export-driven pass | Repeat the flow quickly | Capture responses with `export`, parse values with `jq`, and reuse tokens in curl commands |
 
@@ -941,7 +943,7 @@ Resource links for this section: [HTTP APIs](https://docs.aws.amazon.com/apigate
 
 HTTP API uses `apigatewayv2` for CLI reference, but the intended lab setup is console-first.
 
-Console path: **API Gateway** -> **Create API** -> **HTTP API** -> create the API from `API_NAME`, add Lambda integrations for `/jedi` and `/sith`, create the `prod` stage, then attach a JWT authorizer.
+Console path: **API Gateway** -> **Create API** -> **HTTP API** -> create the API from `API_NAME`, add Lambda integrations for `/jedi` and `/sith`, create the `prod` stage, test the public routes, then attach a JWT authorizer.
 
 Equivalent CLI reference:
 
@@ -968,7 +970,24 @@ export COGNITO_AUTHORIZER_ID=$(aws apigatewayv2 create-authorizer \
   --region "$AWS_REGION")
 ```
 
-Test:
+No-token enforcement test:
+
+After attaching the JWT authorizer, call the route without an `Authorization` header. API Gateway should return `401`, and Lambda should not log a new invocation.
+
+```bash
+curl -i "${API_ENDPOINT}/prod/jedi?name=Chewbacca"
+```
+
+Expected:
+
+```text
+HTTP/2 401
+...
+
+{"message":"Unauthorized"}
+```
+
+Fresh-token test:
 
 This request sends the Cognito access token in the `Authorization` header. HTTP API validates the JWT before Lambda runs, so a successful response proves both the token and route authorizer are wired correctly.
 
@@ -1057,7 +1076,24 @@ aws apigateway create-deployment \
   --region "$AWS_REGION"
 ```
 
-Test:
+No-token enforcement test:
+
+After attaching the Cognito authorizer and redeploying `prod`, call the route without an `Authorization` header. API Gateway should return `401`, and Lambda should not log a new invocation.
+
+```bash
+curl -i "${API_ENDPOINT}/prod/jedi?name=Chewbacca"
+```
+
+Expected:
+
+```text
+HTTP/2 401
+...
+
+{"message":"Unauthorized"}
+```
+
+Fresh-token test:
 
 This request sends the Cognito ID token in the `Authorization` header. In the barebones REST flow, no method scopes are configured, so the Cognito user-pool authorizer can validate the identity token and allow the Lambda integration.
 
@@ -1146,6 +1182,8 @@ The CLI flow is better for understanding raw challenge mechanics. Hosted UI is b
 ## Validation Tasks
 
 - [ ] Explain why `SECRET_HASH` exists.
+- [ ] Confirm the public route works before attaching the authorizer.
+- [ ] Confirm the protected route returns `401` without a token after attaching the authorizer.
 - [ ] Generate a valid `SECRET_HASH`.
 - [ ] Run the manual-first `USER_AUTH` flow and observe `SELECT_CHALLENGE`.
 - [ ] Copy the first `Session` value by hand into the `PASSWORD` challenge.
