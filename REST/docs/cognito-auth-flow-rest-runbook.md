@@ -97,8 +97,6 @@ Helper script pass:
 | [`../../shared/scripts/easier_get_token.py`](../../shared/scripts/easier_get_token.py) | Direct token helper for a public no-secret app client |
 | [`../../shared/scripts/flavor_get_token.py`](../../shared/scripts/flavor_get_token.py) | Token helper that decodes claims and prints Jedi/Sith curl examples |
 | [`../../shared/scripts/requirements.txt`](../../shared/scripts/requirements.txt) | Python dependency list for the helper-script venv |
-| Original class notes | Recovered `USER_AUTH`, challenge selection, MFA, and token-handling workflow |
-| Original Lesson B Lambda lab | Simple API Gateway + Lambda pattern that shaped the Jedi/Sith route handlers |
 
 ## Prerequisites For CLI Testing
 

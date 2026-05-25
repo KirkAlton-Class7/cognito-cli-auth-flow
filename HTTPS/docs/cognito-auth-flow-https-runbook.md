@@ -92,8 +92,6 @@ The API routes are intentionally simple:
 
 | Source | Purpose |
 | --- | --- |
-| Original class notes | Recovered `USER_AUTH`, challenge selection, MFA, and token-handling workflow |
-| Original Lesson B Lambda lab | Simple API Gateway + Lambda pattern that shaped the Jedi/Sith route handlers |
 | [`../../shared/lambda-code`](../../shared/lambda-code/) | Simplified Chewbacca/Jedi/Sith Lambda functions for this runbook |
 | [`../../shared/scripts/secret_hash.py`](../../shared/scripts/secret_hash.py) | Helper script for Cognito app clients with a client secret |
 | [`../../shared/scripts/easier_get_token.py`](../../shared/scripts/easier_get_token.py) | Direct token helper for a public no-secret app client |
