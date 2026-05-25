@@ -3,7 +3,7 @@
 HTTP API implementation of the Chewbacca Cognito CLI auth-flow lab.<br>
 View the REST version [here](../../REST/README.md) if you prefer that implementation.<br><br>
 
-This lab rebuilds the class workflow that shows how Cognito authentication works from the command line after the infrastructure is created in the AWS Console. It keeps the architecture intentionally small: one user pool, one app client, two Lambda functions, one HTTP API, and a Cognito JWT authorizer.
+This lab rebuilds the class workflow that shows how Cognito authentication works from the command line after the infrastructure is created in the AWS Console. It keeps the architecture intentionally small: one user pool, one secret-bearing app client for `SECRET_HASH`, one optional public helper app client, two Lambda functions, one HTTP API, and a Cognito JWT authorizer.
 
 > [!IMPORTANT]
 > This folder documents the HTTP API implementation. The REST implementation uses the same Cognito flow but a different API Gateway command set and authorizer type.
@@ -23,7 +23,7 @@ Chewbacca test user
 HTTP API JWT authorizer
 ```
 
-Use the **CLI** after the console build to test authentication. Run it in two passes:
+Use the **CLI** after the console build to test authentication. Run it as a progression:
 
 ```text
 Public route check:
@@ -50,6 +50,12 @@ Export pass:
   export Session values
   export JWT tokens
   call protected routes with fresh tokens
+
+Helper script pass:
+  create or use a public app client with no secret
+  set up a local Python venv
+  run easier_get_token.py for direct token retrieval
+  run flavor_get_token.py for decoded claims and curl examples
 ```
 
 > [!NOTE]
@@ -90,6 +96,9 @@ The API routes are intentionally simple:
 | Original Lesson B Lambda lab | Simple API Gateway + Lambda pattern that shaped the Jedi/Sith route handlers |
 | [`../../shared/lambda-code`](../../shared/lambda-code/) | Simplified Chewbacca/Jedi/Sith Lambda functions for this runbook |
 | [`../../shared/scripts/secret_hash.py`](../../shared/scripts/secret_hash.py) | Helper script for Cognito app clients with a client secret |
+| [`../../shared/scripts/easier_get_token.py`](../../shared/scripts/easier_get_token.py) | Direct token helper for a public no-secret app client |
+| [`../../shared/scripts/flavor_get_token.py`](../../shared/scripts/flavor_get_token.py) | Token helper that decodes claims and prints Jedi/Sith curl examples |
+| [`../../shared/scripts/requirements.txt`](../../shared/scripts/requirements.txt) | Python dependency list for the helper-script venv |
 
 ## Prerequisites For CLI Testing
 
@@ -127,7 +136,7 @@ cd "$LAB_REPO"
 Create the infrastructure in the AWS Console using these names, then export the same values in your terminal before running the authentication flow.
 
 ```bash
-export AWS_REGION="us-west-2"
+export AWS_REGION="us-east-1"
 export PROJECT_NAME="chewbacca-auth-http"
 
 export JEDI_FUNCTION="${PROJECT_NAME}-jedi-python"
@@ -497,7 +506,7 @@ Console path: **Amazon Cognito** -> **User pools** -> **Create user pool**. Use 
 | User pool name | Cognito user pool details | `chewbacca-auth-http-users` |
 | User pool ID | Cognito user pool details | `<USER_POOL_ID>` |
 | Issuer URL | `https://cognito-idp.<REGION>.amazonaws.com/<USER_POOL_ID>` | `<COGNITO_ISSUER>` |
-| Region | AWS console region selector | `us-west-2` |
+| Region | AWS console region selector | `us-east-1` |
 
 ### 9.1 Create The User Pool
 
@@ -769,7 +778,7 @@ Use these placeholders in the manual commands:
 
 | Placeholder | Where to get it |
 | --- | --- |
-| `<REGION>` | The lab region, such as `us-west-2` |
+| `<REGION>` | The lab region, such as `us-east-1` |
 | `<CLIENT_ID>` | Cognito app client ID from Step 10 |
 | `<CLIENT_SECRET>` | Cognito app client secret from Step 10 |
 | `<USER_NAME>` | Test username from Step 11, such as `chewbacca` |
@@ -1001,7 +1010,7 @@ After completing the manual run, repeat the same authentication flow with shell 
 | Parameter | Console Location | Value |
 | --- | --- | --- |
 | Lab repo path | Local terminal | `<COGNITO_CLI_AUTH_FLOW_REPO_ROOT>` |
-| AWS region | AWS Console region selector | `us-west-2` |
+| AWS region | AWS Console region selector | `us-east-1` |
 | App client ID | Cognito user pool -> App clients -> `<APP_CLIENT_NAME>` | `<CLIENT_ID>` |
 | App client secret | Cognito user pool -> App clients -> `<APP_CLIENT_NAME>` -> show client secret | `<CLIENT_SECRET>` |
 | Test username | Cognito user pool -> Users -> user details | `chewbacca` |
@@ -1024,7 +1033,7 @@ cd "$LAB_REPO"
 Export the remaining values:
 
 ```bash
-export AWS_REGION="us-west-2"
+export AWS_REGION="us-east-1"
 export CLIENT_ID="<CLIENT_ID>"
 export CLIENT_SECRET="<CLIENT_SECRET>"
 export TEST_USERNAME="chewbacca"
@@ -1200,6 +1209,71 @@ eyJjdHkiOiJKV1QiLCJlbmMi
 
 > [!IMPORTANT]
 > Access tokens expire after 15 minutes in this lab. If API Gateway later returns `{"message":"The incoming token has expired"}` or a `401`, rerun the export-driven authentication flow and retry with a fresh `ACCESS_TOKEN`.
+
+### 15.5 Script Helper Run: `easier_get_token.py` Then `flavor_get_token.py`
+
+After the manual and export-driven passes are working, use the Python helpers to make repeat token retrieval faster. These scripts intentionally use `USER_PASSWORD_AUTH`, so they require a **public app client with no client secret**. Keep the secret-bearing app client from Step 10 for the `SECRET_HASH` learning path, then create a second helper client for these scripts.
+
+Console path: open the same user pool -> **App clients** -> **Create app client**. Use a name like `chewbacca-auth-http-public-token-helper`, turn **Generate client secret** off, enable `ALLOW_USER_PASSWORD_AUTH` and `ALLOW_REFRESH_TOKEN_AUTH`, and keep the same 15-minute access and ID token validity.
+
+Equivalent CLI reference:
+
+```bash
+export PUBLIC_CLIENT_JSON=$(aws cognito-idp create-user-pool-client \
+  --user-pool-id "$USER_POOL_ID" \
+  --client-name "${PROJECT_NAME}-public-token-helper" \
+  --explicit-auth-flows ALLOW_USER_PASSWORD_AUTH ALLOW_REFRESH_TOKEN_AUTH \
+  --access-token-validity 15 \
+  --id-token-validity 15 \
+  --refresh-token-validity 1 \
+  --token-validity-units AccessToken=minutes,IdToken=minutes,RefreshToken=days \
+  --query 'UserPoolClient' \
+  --output json \
+  --region "$AWS_REGION")
+
+export COGNITO_PUBLIC_CLIENT_ID=$(echo "$PUBLIC_CLIENT_JSON" | jq -r '.ClientId')
+```
+
+Set up a local venv manually before running the helpers:
+
+```bash
+cd "$LAB_REPO"
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r shared/scripts/requirements.txt
+```
+
+Export the values the scripts read. `API_BASE` should be your API Gateway `/prod` base URL. The example shape is `https://a9x4k2m7qp.execute-api.us-east-1.amazonaws.com/prod`; replace the random API ID with your own.
+
+```bash
+export AWS_REGION="us-east-1"
+export COGNITO_PUBLIC_CLIENT_ID="<PUBLIC_NO_SECRET_CLIENT_ID>"
+export COGNITO_USERNAME="$TEST_USERNAME"
+export COGNITO_PASSWORD="$TEST_PASSWORD"
+export API_BASE="${API_ENDPOINT}/prod"
+```
+
+Omit `COGNITO_PASSWORD` if you prefer the scripts to prompt for the password without storing it in the shell environment.
+
+Run the simpler helper first:
+
+```bash
+python shared/scripts/easier_get_token.py
+```
+
+Use this to confirm the public client, user password, MFA prompt, and token response work without the manual `Session` copying.
+
+Then run the flavored helper:
+
+```bash
+python shared/scripts/flavor_get_token.py
+```
+
+This helper decodes the ID and access token claims, shows token expiration, and prints curl examples for the same `/prod/jedi` and `/prod/sith` routes used throughout this runbook.
+
+> [!NOTE]
+> These helpers are convenience tools after the learning pass. If the public client has a secret, Cognito will reject the script flow because the scripts do not send `SECRET_HASH`.
 
 ## 16. Token Use
 

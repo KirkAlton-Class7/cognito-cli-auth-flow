@@ -183,13 +183,16 @@ The lab uses separate resource names so both implementations can exist in the sa
 
 ## Shared Code
 
-The lab has shared Lambda handlers and a shared helper script.
+The lab has shared Lambda handlers and shared helper scripts.
 
 | File | Purpose |
 | --- | --- |
 | `shared/lambda-code/jedi_python.py` | Python Lambda route handler for `/jedi` |
 | `shared/lambda-code/sith_node.js` | Node.js Lambda route handler for `/sith` |
 | `shared/scripts/secret_hash.py` | Computes Cognito `SECRET_HASH` |
+| `shared/scripts/easier_get_token.py` | Direct `USER_PASSWORD_AUTH` token helper for a public no-secret app client |
+| `shared/scripts/flavor_get_token.py` | Decodes token claims and prints Jedi/Sith curl examples |
+| `shared/scripts/requirements.txt` | Python dependency list for helper-script venv setup |
 
 ### Jedi Python Handler
 
@@ -345,6 +348,7 @@ Run the CLI authentication workflow in two modes:
 | Authorizer enforcement check | Prove API Gateway blocks unauthenticated requests | Attach the authorizer, call `/jedi` without a token, and confirm `401` with no Lambda invocation |
 | Manual-first pass | Understand Cognito challenge mechanics | Read each JSON response, copy `Session` values by hand, paste MFA codes by hand, and inspect tokens before using them |
 | Export-driven pass | Repeat the flow quickly | Capture responses with `export`, parse values with `jq`, and reuse tokens in curl commands |
+| Helper-script pass | Make the repeated token flow easier | Use a public no-secret app client, activate a Python venv, run `easier_get_token.py`, then run `flavor_get_token.py` |
 
 > [!important]
 > The manual pass matters. Cognito's `Session` value changes as the flow moves from `SELECT_CHALLENGE` to `PASSWORD` to `SOFTWARE_TOKEN_MFA`. Copying those values manually once or twice makes the sequence much easier to remember later.
@@ -354,14 +358,14 @@ Run the CLI authentication workflow in two modes:
 HTTP API version:
 
 ```bash
-export AWS_REGION="us-west-2"
+export AWS_REGION="us-east-1"
 export PROJECT_NAME="chewbacca-auth-http"
 ```
 
 REST API version:
 
 ```bash
-export AWS_REGION="us-west-2"
+export AWS_REGION="us-east-1"
 export PROJECT_NAME="chewbacca-auth-rest"
 ```
 
@@ -776,7 +780,7 @@ cd "$LAB_REPO"
 ```
 
 ```bash
-export AWS_REGION="us-west-2"
+export AWS_REGION="us-east-1"
 export CLIENT_ID="<CLIENT_ID>"
 export CLIENT_SECRET="<CLIENT_SECRET>"
 export TEST_USERNAME="chewbacca"
@@ -916,6 +920,41 @@ eyJjdHkiOiJKV1QiLCJlbmMi
 
 > [!important]
 > Cognito tokens expire. If API Gateway returns `{"message":"The incoming token has expired"}`, the authorizer is doing its job and Lambda was not invoked. Run the auth flow again, export a fresh route token, and retry the request.
+
+## Helper Script Token Flow
+
+Use this after the `SECRET_HASH` and export-driven passes are understood. The helper scripts use direct `USER_PASSWORD_AUTH`, so create or select a second Cognito app client with **Generate client secret** turned off. Keep the original secret-bearing app client for the `SECRET_HASH` learning path.
+
+Set up the venv manually:
+
+```bash
+cd "$LAB_REPO"
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r shared/scripts/requirements.txt
+```
+
+Export values for the scripts. `API_BASE` should be your API Gateway `/prod` base URL. Example shape: `https://a9x4k2m7qp.execute-api.us-east-1.amazonaws.com/prod`.
+
+```bash
+export AWS_REGION="us-east-1"
+export COGNITO_PUBLIC_CLIENT_ID="<PUBLIC_NO_SECRET_CLIENT_ID>"
+export COGNITO_USERNAME="$TEST_USERNAME"
+export COGNITO_PASSWORD="$TEST_PASSWORD"
+export API_BASE="${API_ENDPOINT}/prod"
+```
+
+Omit `COGNITO_PASSWORD` if you prefer the scripts to prompt for the password without storing it in the shell environment.
+
+Run them in order:
+
+```bash
+python shared/scripts/easier_get_token.py
+python shared/scripts/flavor_get_token.py
+```
+
+`easier_get_token.py` confirms the direct password-plus-MFA flow. `flavor_get_token.py` compounds that by decoding claims, showing expiration, and printing curl examples for `/prod/jedi` and `/prod/sith`.
 
 ## Token Handling
 

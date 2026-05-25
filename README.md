@@ -9,7 +9,7 @@ This repo is intentionally smaller than Tawny Port. It isolates the authenticati
 The lab demonstrates the same Cognito identity flow across two API Gateway implementations:
 
 * The AWS Console is used to create the user pool, app client, Lambda functions, API Gateway routes, and authorizers.
-* The CLI walks through `USER_AUTH`, `SELECT_CHALLENGE`, `PASSWORD`, `SOFTWARE_TOKEN_MFA`, manual token inspection, exported token reuse, and route testing.
+* The CLI walks through `USER_AUTH`, `SELECT_CHALLENGE`, `PASSWORD`, `SOFTWARE_TOKEN_MFA`, manual token inspection, exported token reuse, helper-script token retrieval, and route testing.
 * API Gateway protects simple Jedi and Sith Lambda routes after the console infrastructure is in place.
 * Lambda only runs after API Gateway accepts the Cognito token.
 * CloudWatch proves whether the request actually reached the function.
@@ -90,6 +90,12 @@ Export pass:
   generate SECRET_HASH
   export Session and JWT values
   repeat curl route tests quickly
+
+Helper script pass:
+  create or use a public no-secret app client
+  set up a local Python venv
+  run easier_get_token.py for direct token retrieval
+  run flavor_get_token.py for decoded claims and curl examples
 ```
 
 > [!IMPORTANT]
@@ -112,7 +118,10 @@ cognito-cli-auth-flow/
     │   ├── jedi_python.py
     │   └── sith_node.js
     └── scripts/
-        └── secret_hash.py
+        ├── requirements.txt
+        ├── secret_hash.py
+        ├── easier_get_token.py
+        └── flavor_get_token.py
 ```
 
 ## Shared Code
@@ -124,6 +133,9 @@ The Lambda and helper script files are shared across both implementations:
 | [shared/lambda-code/jedi_python.py](shared/lambda-code/jedi_python.py) | Python Jedi route handler |
 | [shared/lambda-code/sith_node.js](shared/lambda-code/sith_node.js) | Node.js Sith route handler |
 | [shared/scripts/secret_hash.py](shared/scripts/secret_hash.py) | Cognito `SECRET_HASH` helper for app clients with secrets |
+| [shared/scripts/easier_get_token.py](shared/scripts/easier_get_token.py) | Direct `USER_PASSWORD_AUTH` token helper for a public no-secret app client |
+| [shared/scripts/flavor_get_token.py](shared/scripts/flavor_get_token.py) | Token helper that decodes claims and prints Jedi/Sith curl examples |
+| [shared/scripts/requirements.txt](shared/scripts/requirements.txt) | Python dependency list for the helper-script venv |
 
 ## Learning Outcome
 

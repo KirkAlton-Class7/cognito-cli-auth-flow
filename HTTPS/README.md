@@ -5,10 +5,11 @@ View the REST version [here](../REST/README.md) if you prefer that implementatio
 
 This version uses API Gateway **HTTP API** routes with a built-in JWT authorizer. Build the infrastructure in the AWS Console, then use the CLI for the Cognito challenge flow, token handling, and protected route tests.
 
-The runbook intentionally includes two CLI passes:
+The runbook intentionally progresses through several CLI passes:
 
 * Manual-first pass: read each Cognito JSON response, copy `Session` values by hand, and paste the MFA code yourself.
 * Export-driven pass: export sessions and tokens so you can repeat the flow quickly after you understand it.
+* Helper-script pass: use a public no-secret app client with `easier_get_token.py`, then use `flavor_get_token.py` for decoded claims and ready-made route tests.
 
 > [!IMPORTANT]
 > This folder documents the HTTP API implementation. Keep its API ID, stage, routes, and cleanup variables separate from the REST implementation.
@@ -22,6 +23,7 @@ The runbook intentionally includes two CLI passes:
 | [REST Version](../REST/README.md) | Companion REST API implementation |
 | [Shared Lambda Code](../shared/lambda-code/) | Jedi and Sith Lambda handlers |
 | [Secret Hash Helper](../shared/scripts/secret_hash.py) | Cognito `SECRET_HASH` helper |
+| [Token Helpers](../shared/scripts/) | `easier_get_token.py`, `flavor_get_token.py`, and venv requirements |
 
 ## Architecture Summary
 
