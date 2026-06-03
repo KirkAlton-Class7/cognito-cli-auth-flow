@@ -18,6 +18,8 @@ Start with the API Gateway style you want to practice:
 
 * [HTTPS Version](HTTPS/README.md) (HTTP API JWT authorizer)
 * [REST Version](REST/README.md) (REST API Cognito User Pool authorizer)
+* [Token Detector](deploy-token-detector/README.md) (token-use tracking after a base auth flow exists)
+* [Unused Token Detector Lab](LABS/jedi-token-detector/README.md) (guided editing path for the token detector)
 
 > [!IMPORTANT]
 > Use separate project names when running both versions. The runbooks already do this with `chewbacca-auth-http` and `chewbacca-auth-rest`, so both labs can exist in the same AWS account and region.
@@ -105,14 +107,33 @@ Helper script pass:
 
 ```text
 cognito-cli-auth-flow/
+├── deploy-token-detector/
+│   ├── README.md
+│   ├── docs/
+│   │   ├── deploy-token-detector-runbook.md
+│   │   ├── TEARDOWN_HTTPS.md
+│   │   └── TEARDOWN_REST.md
+│   ├── lambda-code/
+│   └── scripts/
 ├── HTTPS/
 │   ├── README.md
 │   └── docs/
-│       └── cognito-auth-flow-https-runbook.md
+│       ├── cognito-auth-flow-https-runbook.md
+│       └── TEARDOWN_HTTPS.md
+├── LABS/
+│   └── jedi-token-detector/
+│       ├── README.md
+│       ├── docs/
+│       │   ├── jedi-token-detector-lab.md
+│       │   ├── TEARDOWN_HTTPS.md
+│       │   └── TEARDOWN_REST.md
+│       ├── quick-deployment/
+│       └── sandbox/
 ├── REST/
 │   ├── README.md
 │   └── docs/
-│       └── cognito-auth-flow-rest-runbook.md
+│       ├── cognito-auth-flow-rest-runbook.md
+│       └── TEARDOWN_REST.md
 └── shared/
     ├── lambda-code/
     │   ├── jedi_python.py

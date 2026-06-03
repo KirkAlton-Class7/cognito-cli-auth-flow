@@ -1,9 +1,9 @@
-# Chewbacca Cognito CLI Auth Flow Lab - REST Version
+# Chewbacca Cognito CLI Auth Flow Runbook - REST Version
 
-REST API implementation of the Chewbacca Cognito CLI auth-flow lab.<br>
+REST API implementation of the Chewbacca Cognito CLI auth-flow runbook.<br>
 View the HTTP API version [here](../../HTTPS/README.md) if you prefer that implementation.<br><br>
 
-This lab keeps the same authentication story as the HTTP API version. Build the infrastructure in the AWS Console, then use the CLI for the Cognito challenge flow, manual token inspection, exported-token reuse, and protected route tests:
+This runbook keeps the same authentication story as the HTTP API version. Build the infrastructure in the AWS Console, then use the CLI for the Cognito challenge flow, manual token inspection, exported-token reuse, and protected route tests:
 
 ```text
 Chewbacca CLI user
@@ -18,7 +18,7 @@ Chewbacca CLI user
   -> CloudWatch Logs
 ```
 
-The implementation difference is API Gateway. REST APIs do not use the HTTP API JWT authorizer command set. For this lab, use a native **Cognito User Pool authorizer** on the REST API methods.
+The implementation difference is API Gateway. REST APIs do not use the HTTP API JWT authorizer command set. For this runbook, use a native **Cognito User Pool authorizer** on the REST API methods.
 
 > [!NOTE]
 > No custom authenticator Lambda is needed for the protected Jedi and Sith routes. API Gateway REST API can validate Cognito user-pool tokens directly with a Cognito authorizer. A Lambda authorizer would be useful for custom token logic, non-Cognito identity providers, or policy decisions that Cognito scopes alone cannot express.
@@ -76,7 +76,7 @@ Helper script pass:
 ```
 
 > [!NOTE]
-> CLI blocks in the infrastructure sections are equivalent reference commands. The intended lab flow is console setup first, then CLI authentication and validation.
+> CLI blocks in the infrastructure sections are equivalent reference commands. The intended runbook flow is console setup first, then CLI authentication and validation.
 
 > [!IMPORTANT]
 > Do the manual CLI pass first. Copy challenge `Session` values by hand so the Cognito sequence is visible: `SELECT_CHALLENGE` -> `PASSWORD` -> `SOFTWARE_TOKEN_MFA`. After that, use the export path for repeatable testing.
@@ -118,18 +118,18 @@ aws sts get-caller-identity
 Set the working directory:
 
 ```bash
-export LAB_REPO="<COGNITO_CLI_AUTH_FLOW_REPO_ROOT>"
-cd "$LAB_REPO"
+export REPO_ROOT="<COGNITO_CLI_AUTH_FLOW_REPO_ROOT>"
+cd "$REPO_ROOT"
 ```
 
 Example:
 
 ```bash
-export LAB_REPO="/Users/kirk/cognito-cli-auth-flow"
-cd "$LAB_REPO"
+export REPO_ROOT="/Users/kirk/cognito-cli-auth-flow"
+cd "$REPO_ROOT"
 ```
 
-## 1. Record And Export Lab Values For CLI Testing
+## 1. Record And Export Runbook Values For CLI Testing
 
 Create the infrastructure in the AWS Console using these names, then export the same values in your terminal before running the authentication flow. Use a REST-specific project name so this version can run beside the HTTP API version.
 
@@ -224,7 +224,7 @@ echo "$LAMBDA_ROLE_ARN"
 Package the shared Jedi and Sith functions.
 
 ```bash
-cd "$LAB_REPO/shared/lambda-code"
+cd "$REPO_ROOT/shared/lambda-code"
 
 zip jedi-python.zip jedi_python.py
 zip sith-node.zip sith_node.js
@@ -597,9 +597,9 @@ echo "$USER_POOL_ARN"
 
 ## 10. Create the App Client
 
-This lab uses an app client with a client secret on purpose so you can learn `SECRET_HASH`.
+This runbook uses an app client with a client secret on purpose so you can learn `SECRET_HASH`.
 
-Console path: open the user pool -> **App clients** -> **Create app client**. Enable the auth flows shown below, generate a client secret, and set token expiration for the lab:
+Console path: open the user pool -> **App clients** -> **Create app client**. Enable the auth flows shown below, generate a client secret, and set token expiration for the runbook:
 
 | Token | Expiration |
 | --- | --- |
@@ -622,7 +622,7 @@ Console path: open the user pool -> **App clients** -> **Create app client**. En
 
 Token settings to verify:
 
-| Token setting | Lab value |
+| Token setting | Runbook value |
 | --- | --- |
 | Access token validity | `15 minutes` |
 | ID token validity | `15 minutes` |
@@ -661,7 +661,7 @@ echo "$CLIENT_JSON" | jq '{AccessTokenValidity,IdTokenValidity,RefreshTokenValid
 ```
 
 > [!IMPORTANT]
-> Do not commit real Cognito client secrets. This lab prints only a short prefix for validation.
+> Do not commit real Cognito client secrets. This runbook prints only a short prefix for validation.
 
 ## 11. Create the Test User
 
@@ -817,7 +817,7 @@ Use these placeholders in the manual commands:
 
 | Placeholder | Where to get it |
 | --- | --- |
-| `<REGION>` | The lab region, such as `us-east-1` |
+| `<REGION>` | The runbook region, such as `us-east-1` |
 | `<CLIENT_ID>` | Cognito app client ID from Step 10 |
 | `<CLIENT_SECRET>` | Cognito app client secret from Step 10 |
 | `<USER_NAME>` | Test username from Step 11, such as `chewbacca` |
@@ -838,7 +838,7 @@ Use these placeholders in the manual commands:
 `SECRET_HASH` is the client-secret proof that Cognito expects when an app client has a secret. The helper calculates the HMAC value from the username, app client ID, and client secret so the manual CLI requests match Cognito's documented `SECRET_HASH` requirement.
 
 ```bash
-cd "$LAB_REPO"
+cd "$REPO_ROOT"
 python3 shared/scripts/secret_hash.py \
   "<USER_NAME>" \
   "<CLIENT_ID>" \
@@ -889,7 +889,7 @@ Expected output:
 > [!NOTE]
 > `ExpiresIn` follows the app client token validity. If the app client is still at the default one-hour validity, this value can appear as `3600` instead of `900`.
 
-Use the temporary access token to request a software-token secret. `associate-software-token` begins TOTP setup and asks Cognito to generate the private key that your authenticator app will use. Cognito allows this call with either a signed-in user's access token or a valid challenge session. This lab uses the access token for a clearer setup path.
+Use the temporary access token to request a software-token secret. `associate-software-token` begins TOTP setup and asks Cognito to generate the private key that your authenticator app will use. Cognito allows this call with either a signed-in user's access token or a valid challenge session. This runbook uses the access token for a clearer setup path.
 
 ```bash
 aws cognito-idp associate-software-token \
@@ -1048,7 +1048,7 @@ After completing the manual run, repeat the same authentication flow with shell 
 
 | Parameter | Console Location | Value |
 | --- | --- | --- |
-| Lab repo path | Local terminal | `<COGNITO_CLI_AUTH_FLOW_REPO_ROOT>` |
+| Repo path | Local terminal | `<COGNITO_CLI_AUTH_FLOW_REPO_ROOT>` |
 | AWS region | AWS Console region selector | `us-east-1` |
 | App client ID | Cognito user pool -> App clients -> `<APP_CLIENT_NAME>` | `<CLIENT_ID>` |
 | App client secret | Cognito user pool -> App clients -> `<APP_CLIENT_NAME>` -> show client secret | `<CLIENT_SECRET>` |
@@ -1058,15 +1058,15 @@ After completing the manual run, repeat the same authentication flow with shell 
 Set the working directory:
 
 ```bash
-export LAB_REPO="<COGNITO_CLI_AUTH_FLOW_REPO_ROOT>"
-cd "$LAB_REPO"
+export REPO_ROOT="<COGNITO_CLI_AUTH_FLOW_REPO_ROOT>"
+cd "$REPO_ROOT"
 ```
 
 Example:
 
 ```bash
-export LAB_REPO="/Users/kirk/cognito-cli-auth-flow"
-cd "$LAB_REPO"
+export REPO_ROOT="/Users/kirk/cognito-cli-auth-flow"
+cd "$REPO_ROOT"
 ```
 
 Export the remaining values:
@@ -1082,7 +1082,7 @@ export TEST_PASSWORD="<USER_PASSWORD>"
 Validation:
 
 ```bash
-echo "$LAB_REPO"
+echo "$REPO_ROOT"
 echo "$AWS_REGION"
 echo "$CLIENT_ID"
 echo "${CLIENT_SECRET:0:8}..."
@@ -1097,7 +1097,7 @@ echo "$TEST_USERNAME"
 This is the same client-secret proof from the manual pass, stored in a shell variable so the remaining commands can be repeated quickly without recopying the hash.
 
 ```bash
-cd "$LAB_REPO"
+cd "$REPO_ROOT"
 
 export SECRET_HASH=$(python3 shared/scripts/secret_hash.py \
   "$TEST_USERNAME" \
@@ -1247,7 +1247,7 @@ eyJjdHkiOiJKV1QiLCJlbmMi
 ```
 
 > [!IMPORTANT]
-> ID tokens expire after 15 minutes in this lab. If API Gateway later returns `{"message":"The incoming token has expired"}` or a `401`, rerun the export-driven authentication flow and retry with a fresh `ID_TOKEN`.
+> ID tokens expire after 15 minutes in this runbook. If API Gateway later returns `{"message":"The incoming token has expired"}` or a `401`, rerun the export-driven authentication flow and retry with a fresh `ID_TOKEN`.
 
 ### 15.5 Script Helper Run: `easier_get_token.py` Then `flavor_get_token.py`
 
@@ -1276,7 +1276,7 @@ export COGNITO_PUBLIC_CLIENT_ID=$(echo "$PUBLIC_CLIENT_JSON" | jq -r '.ClientId'
 Set up a local venv manually before running the helpers:
 
 ```bash
-cd "$LAB_REPO"
+cd "$REPO_ROOT"
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
@@ -1316,13 +1316,13 @@ This helper decodes the ID and access token claims, shows token expiration, and 
 
 ## 16. Token Use
 
-| Token | What it represents | Use in this lab |
+| Token | What it represents | Use in this runbook |
 | --- | --- | --- |
 | Access token | Permission to call APIs | Use when REST methods require OAuth scopes |
-| ID token | User identity/profile claims | Use for this barebones REST authorizer lab with no method scopes configured |
+| ID token | User identity/profile claims | Use for this barebones REST authorizer runbook with no method scopes configured |
 | Refresh token | Used to request new tokens | Keep private. Do not send to API Gateway |
 
-For this REST lab, use:
+For this REST runbook, use:
 
 ```bash
 Authorization: Bearer $ID_TOKEN
@@ -1435,13 +1435,13 @@ This is simpler for CLI testing, but it does not teach the `SELECT_CHALLENGE` ne
 | `CodeMismatchException` | MFA code expired or copied incorrectly | Wait for a fresh authenticator code |
 | `{"message":"The incoming token has expired"}` | ID token expired before the protected route test | Re-run the auth flow and export a fresh `ID_TOKEN` |
 | REST route stays public | Method authorization changed but API was not redeployed | Run `create-deployment` again for the `prod` stage |
-| REST route returns `401` with token | Wrong user pool ARN, expired token, access token used without scopes, malformed Authorization header, or wrong API deployment | Use `ID_TOKEN` for the no-scope lab, confirm authorizer provider ARN, and redeploy |
+| REST route returns `401` with token | Wrong user pool ARN, expired token, access token used without scopes, malformed Authorization header, or wrong API deployment | Use `ID_TOKEN` for the no-scope runbook, confirm authorizer provider ARN, and redeploy |
 | API returns `500` | Lambda integration or function error | Check CloudWatch logs for the Lambda |
 | Lambda never logs during failed auth | Expected behavior | API Gateway rejects invalid tokens before Lambda runs |
 
 ## Final Check
 
-You have completed the REST lab when you can explain this flow without looking:
+You have completed the REST runbook when you can explain this flow without looking:
 
 ```text
 SECRET_HASH proves the app client secret
@@ -1472,17 +1472,11 @@ Every AWS CLI command used in this runbook is linked below to the direct AWS com
 | `aws iam create-role` | [iam create-role](https://docs.aws.amazon.com/cli/latest/reference/iam/create-role.html) |
 | `aws iam attach-role-policy` | [iam attach-role-policy](https://docs.aws.amazon.com/cli/latest/reference/iam/attach-role-policy.html) |
 | `aws iam get-role` | [iam get-role](https://docs.aws.amazon.com/cli/latest/reference/iam/get-role.html) |
-| `aws iam detach-role-policy` | [iam detach-role-policy](https://docs.aws.amazon.com/cli/latest/reference/iam/detach-role-policy.html) |
-| `aws iam delete-role` | [iam delete-role](https://docs.aws.amazon.com/cli/latest/reference/iam/delete-role.html) |
 | `aws lambda create-function` | [lambda create-function](https://docs.aws.amazon.com/cli/latest/reference/lambda/create-function.html) |
 | `aws lambda get-function` | [lambda get-function](https://docs.aws.amazon.com/cli/latest/reference/lambda/get-function.html) |
 | `aws lambda invoke` | [lambda invoke](https://docs.aws.amazon.com/cli/latest/reference/lambda/invoke.html) |
 | `aws lambda add-permission` | [lambda add-permission](https://docs.aws.amazon.com/cli/latest/reference/lambda/add-permission.html) |
-| `aws lambda delete-function` | [lambda delete-function](https://docs.aws.amazon.com/cli/latest/reference/lambda/delete-function.html) |
-| `aws logs describe-log-groups` | [logs describe-log-groups](https://docs.aws.amazon.com/cli/latest/reference/logs/describe-log-groups.html) |
-| `aws logs delete-log-group` | [logs delete-log-group](https://docs.aws.amazon.com/cli/latest/reference/logs/delete-log-group.html) |
 | `aws apigateway create-rest-api` | [apigateway create-rest-api](https://docs.aws.amazon.com/cli/latest/reference/apigateway/create-rest-api.html) |
-| `aws apigateway get-rest-api` | [apigateway get-rest-api](https://docs.aws.amazon.com/cli/latest/reference/apigateway/get-rest-api.html) |
 | `aws apigateway get-resources` | [apigateway get-resources](https://docs.aws.amazon.com/cli/latest/reference/apigateway/get-resources.html) |
 | `aws apigateway create-resource` | [apigateway create-resource](https://docs.aws.amazon.com/cli/latest/reference/apigateway/create-resource.html) |
 | `aws apigateway put-method` | [apigateway put-method](https://docs.aws.amazon.com/cli/latest/reference/apigateway/put-method.html) |
@@ -1503,113 +1497,3 @@ Every AWS CLI command used in this runbook is linked below to the direct AWS com
 | `aws cognito-idp verify-software-token` | [cognito-idp verify-software-token](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/verify-software-token.html) |
 | `aws cognito-idp set-user-mfa-preference` | [cognito-idp set-user-mfa-preference](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/set-user-mfa-preference.html) |
 | `aws cognito-idp respond-to-auth-challenge` | [cognito-idp respond-to-auth-challenge](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/respond-to-auth-challenge.html) |
-| `aws cognito-idp delete-user-pool` | [cognito-idp delete-user-pool](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/delete-user-pool.html) |
-| `aws cognito-idp describe-user-pool` | [cognito-idp describe-user-pool](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/describe-user-pool.html) |
-
-## Lab Teardown
-
-Run this section when you are finished with the REST API lab and want to remove the AWS resources created during the walkthrough.
-
-> [!WARNING]
-> These commands delete the lab API, Lambda functions, Cognito user pool, CloudWatch log groups, and IAM role. Confirm you are using the REST API lab variables before running teardown.
-
-Confirm the active lab values:
-
-```bash
-echo "$AWS_REGION"
-echo "$PROJECT_NAME"
-echo "$REST_API_ID"
-echo "$USER_POOL_ID"
-echo "$JEDI_FUNCTION"
-echo "$SITH_FUNCTION"
-echo "$LAMBDA_ROLE_NAME"
-```
-
-Delete the REST API. This removes its resources, methods, integrations, deployments, stages, and Cognito authorizer:
-
-```bash
-aws apigateway delete-rest-api \
-  --rest-api-id "$REST_API_ID" \
-  --region "$AWS_REGION"
-```
-
-Delete the Lambda functions:
-
-```bash
-aws lambda delete-function \
-  --function-name "$JEDI_FUNCTION" \
-  --region "$AWS_REGION"
-
-aws lambda delete-function \
-  --function-name "$SITH_FUNCTION" \
-  --region "$AWS_REGION"
-```
-
-Delete the Lambda CloudWatch log groups:
-
-```bash
-aws logs delete-log-group \
-  --log-group-name "/aws/lambda/${JEDI_FUNCTION}" \
-  --region "$AWS_REGION"
-
-aws logs delete-log-group \
-  --log-group-name "/aws/lambda/${SITH_FUNCTION}" \
-  --region "$AWS_REGION"
-```
-
-Delete the Cognito user pool. This also removes the app client, test user, MFA configuration, and issued-token context for the lab:
-
-```bash
-aws cognito-idp delete-user-pool \
-  --user-pool-id "$USER_POOL_ID" \
-  --region "$AWS_REGION"
-```
-
-Detach the managed policy and delete the Lambda execution role:
-
-```bash
-aws iam detach-role-policy \
-  --role-name "$LAMBDA_ROLE_NAME" \
-  --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-
-aws iam delete-role \
-  --role-name "$LAMBDA_ROLE_NAME"
-```
-
-Validate teardown:
-
-The REST API deletion removes resources, methods, integrations, deployments, stages, and the authorizer. Validate the API itself, then validate each standalone resource that was created outside the API container.
-
-```bash
-aws apigateway get-rest-api \
-  --rest-api-id "$REST_API_ID" \
-  --region "$AWS_REGION"
-
-aws cognito-idp describe-user-pool \
-  --user-pool-id "$USER_POOL_ID" \
-  --region "$AWS_REGION"
-
-aws lambda get-function \
-  --function-name "$JEDI_FUNCTION" \
-  --region "$AWS_REGION"
-
-aws lambda get-function \
-  --function-name "$SITH_FUNCTION" \
-  --region "$AWS_REGION"
-
-aws logs describe-log-groups \
-  --log-group-name-prefix "/aws/lambda/${JEDI_FUNCTION}" \
-  --region "$AWS_REGION"
-
-aws logs describe-log-groups \
-  --log-group-name-prefix "/aws/lambda/${SITH_FUNCTION}" \
-  --region "$AWS_REGION"
-
-aws iam get-role \
-  --role-name "$LAMBDA_ROLE_NAME"
-```
-
-Expected result:
-
-- REST API, Cognito user pool, Lambda functions, and IAM role checks should return not-found style errors.
-- CloudWatch log group checks should return an empty `logGroups` list for each Lambda function.

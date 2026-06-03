@@ -20,10 +20,12 @@ The runbook intentionally progresses through several CLI passes:
 | --- | --- |
 | [Architecture](docs/architecture.md) | HTTP API request flow and authorization boundary |
 | [Full Runbook](docs/cognito-auth-flow-https-runbook.md) | Console infrastructure guide with CLI authentication and protected route validation |
+| [Teardown](docs/TEARDOWN_HTTPS.md) | Remove only the base HTTPS lab infrastructure |
 | [REST Version](../REST/README.md) | Companion REST API implementation |
 | [Shared Lambda Code](../shared/lambda-code/) | Jedi and Sith Lambda handlers |
 | [Secret Hash Helper](../shared/scripts/secret_hash.py) | Cognito `SECRET_HASH` helper |
 | [Token Helpers](../shared/scripts/) | `easier_get_token.py`, `flavor_get_token.py`, and venv requirements |
+| [Token Detector](../deploy-token-detector/README.md) | Token-use tracking add-on after the base auth flow exists |
 
 ## Architecture Summary
 

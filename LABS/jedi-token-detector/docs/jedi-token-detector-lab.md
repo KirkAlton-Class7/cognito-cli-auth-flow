@@ -2,7 +2,7 @@
 
 This lab extends the Chewbacca Cognito auth flow by adding token-use telemetry and an unused-token detector. The goal is to practice editing code and seeing why each change exists. You can edit directly in AWS, but the recommended flow is to copy starter code into the sandbox, edit locally, then add the edited code in AWS and deploy. The quick-deployment files are provided after the manual path so you can deploy quickly once the edits make sense.
 
-Production deployment lives in `../../deploy-token-detector/deploy-token-detector-runbook.md`.
+Ready code path lives in `../../../deploy-token-detector/docs/deploy-token-detector-runbook.md`.
 
 ## Theme Map
 
@@ -34,7 +34,7 @@ Production deployment lives in `../../deploy-token-detector/deploy-token-detecto
 Use the same `PROJECT_NAME` as the API lab you already built.
 
 ```bash
-export LAB_REPO="/Users/kirk/devsecops/cognito-auth-lab"
+export LAB_REPO="/Users/kirk/devsecops/cognito-cli-auth-flow"
 cd "$LAB_REPO"
 
 export AWS_REGION="us-east-1"
@@ -627,3 +627,38 @@ Expected result:
 Token is marked used in DynamoDB
 Detector does not alert for that token
 ```
+
+## Final Check
+
+You have completed this lab when you can explain this flow without looking:
+
+`get_token.py` imports `uuid` and creates a unique `token_id`  
+The token helper writes a DynamoDB record with `used` set to `False`  
+The helper prints Jedi and Sith curl commands that include `x-token-id`  
+The Jedi Python Lambda preserves its original route logic and marks tokens used  
+The Sith Node Lambda preserves its original route logic and marks tokens used  
+`unused_token_detector.py` scans for old records where `used` is still `False`  
+CloudWatch logs show `ALERT: Token unused` when a stale token is found  
+The metric filter matches that alert line and feeds the CloudWatch alarm  
+SNS can notify you when the alarm enters the alert state
+
+## References
+
+[Boto3 Documentation - put_item](https://docs.aws.amazon.com/boto3/latest/reference/services/dynamodb/table/put_item.html)  
+[Working With Items and Attributes in DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithItems.html)  
+[Filter Pattern Syntax for Metric Filters, Subscription Filters, Filter Log Events, and Live Tail](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/FilterAndPatternSyntax.html#regex-expressions)
+
+### AWS CLI Command References
+
+Every AWS CLI command used in this lab is linked below to the direct AWS command reference page.
+
+| Command | AWS CLI reference |
+| --- | --- |
+| `aws sts get-caller-identity` | [sts get-caller-identity](https://docs.aws.amazon.com/cli/latest/reference/sts/get-caller-identity.html) |
+| `aws iam get-role` | [iam get-role](https://docs.aws.amazon.com/cli/latest/reference/iam/get-role.html) |
+| `aws iam put-role-policy` | [iam put-role-policy](https://docs.aws.amazon.com/cli/latest/reference/iam/put-role-policy.html) |
+| `aws dynamodb create-table` | [dynamodb create-table](https://docs.aws.amazon.com/cli/latest/reference/dynamodb/create-table.html) |
+| `aws dynamodb describe-table` | [dynamodb describe-table](https://docs.aws.amazon.com/cli/latest/reference/dynamodb/describe-table.html) |
+| `aws dynamodb get-item` | [dynamodb get-item](https://docs.aws.amazon.com/cli/latest/reference/dynamodb/get-item.html) |
+| `aws lambda create-function` | [lambda create-function](https://docs.aws.amazon.com/cli/latest/reference/lambda/create-function.html) |
+| `aws lambda invoke` | [lambda invoke](https://docs.aws.amazon.com/cli/latest/reference/lambda/invoke.html) |

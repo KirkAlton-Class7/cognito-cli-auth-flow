@@ -1,8 +1,6 @@
 # Unused Token Detector Runbook
 
-This runbook deploys token-use tracking and unused-token detection for the Chewbacca Cognito auth lab. It is the production-style path: use the ready scripts and Lambda code in this folder, package them, deploy them, and validate the alert flow.
-
-For the hands-on editing lab, use `../LABS/jedi-token-detector/jedi-token-detector-lab.md`.
+This runbook deploys token-use tracking and unused-token detection for the Chewbacca Cognito auth flow. Use the ready scripts and Lambda code in this folder, package them, deploy them, and validate the alert flow.
 
 ## What This Deploys
 
@@ -26,11 +24,11 @@ Cognito token helper
 
 ## 1. Export Deployment Values
 
-Use the same `PROJECT_NAME` as the API lab you already deployed.
+Use the same `PROJECT_NAME` as the API flow you already deployed.
 
 ```bash
-export LAB_REPO="/Users/kirk/devsecops/cognito-auth-lab"
-cd "$LAB_REPO"
+export REPO_ROOT="/Users/kirk/devsecops/cognito-cli-auth-flow"
+cd "$REPO_ROOT"
 
 export AWS_REGION="us-east-1"
 export PROJECT_NAME="chewbacca-auth-rest"
@@ -142,7 +140,7 @@ aws iam put-role-policy \
 Package the Jedi Python route Lambda:
 
 ```bash
-cd "$LAB_REPO/deploy-token-detector/lambda-code"
+cd "$REPO_ROOT/deploy-token-detector/lambda-code"
 zip jedi-python-token-tracker.zip jedi_python_token_tracker.py
 ```
 
@@ -201,7 +199,7 @@ aws lambda get-function-configuration \
 Package the detector:
 
 ```bash
-cd "$LAB_REPO/deploy-token-detector/lambda-code"
+cd "$REPO_ROOT/deploy-token-detector/lambda-code"
 zip unused-token-detector.zip unused_token_detector.py
 ```
 
@@ -345,7 +343,7 @@ aws cloudwatch put-metric-alarm \
 Run the token helper:
 
 ```bash
-cd "$LAB_REPO"
+cd "$REPO_ROOT"
 
 AWS_REGION="$AWS_REGION" \
 AWS_DEFAULT_REGION="$AWS_REGION" \
@@ -384,3 +382,47 @@ Expected detector log:
 ```text
 ALERT: Token unused for user chewbacca
 ```
+
+## Final Check
+
+You have completed this runbook when you can explain this flow without looking:
+
+`get_token.py` creates a DynamoDB token record with a unique `token_id`  
+The helper prints Jedi and Sith curl commands that carry `x-token-id`  
+The Jedi and Sith route Lambdas preserve their original routing behavior  
+The route Lambdas mark the matching token record as used  
+`unused_token_detector.py` scans for old unused token records  
+CloudWatch logs show `ALERT: Token unused` for stale unused tokens  
+The metric filter turns detector log lines into a CloudWatch metric  
+The alarm can notify through SNS when unused-token alerts appear
+
+## References
+
+[Boto3 Documentation - put_item](https://docs.aws.amazon.com/boto3/latest/reference/services/dynamodb/table/put_item.html)  
+[Working With Items and Attributes in DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithItems.html)  
+[Filter Pattern Syntax for Metric Filters, Subscription Filters, Filter Log Events, and Live Tail](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/FilterAndPatternSyntax.html#regex-expressions)
+
+### AWS CLI Command References
+
+Every AWS CLI command used in this runbook is linked below to the direct AWS command reference page.
+
+| Command | AWS CLI reference |
+| --- | --- |
+| `aws sts get-caller-identity` | [sts get-caller-identity](https://docs.aws.amazon.com/cli/latest/reference/sts/get-caller-identity.html) |
+| `aws iam get-role` | [iam get-role](https://docs.aws.amazon.com/cli/latest/reference/iam/get-role.html) |
+| `aws iam put-role-policy` | [iam put-role-policy](https://docs.aws.amazon.com/cli/latest/reference/iam/put-role-policy.html) |
+| `aws dynamodb create-table` | [dynamodb create-table](https://docs.aws.amazon.com/cli/latest/reference/dynamodb/create-table.html) |
+| `aws dynamodb wait table-exists` | [dynamodb wait table-exists](https://docs.aws.amazon.com/cli/latest/reference/dynamodb/wait/table-exists.html) |
+| `aws dynamodb describe-table` | [dynamodb describe-table](https://docs.aws.amazon.com/cli/latest/reference/dynamodb/describe-table.html) |
+| `aws dynamodb get-item` | [dynamodb get-item](https://docs.aws.amazon.com/cli/latest/reference/dynamodb/get-item.html) |
+| `aws lambda update-function-code` | [lambda update-function-code](https://docs.aws.amazon.com/cli/latest/reference/lambda/update-function-code.html) |
+| `aws lambda update-function-configuration` | [lambda update-function-configuration](https://docs.aws.amazon.com/cli/latest/reference/lambda/update-function-configuration.html) |
+| `aws lambda create-function` | [lambda create-function](https://docs.aws.amazon.com/cli/latest/reference/lambda/create-function.html) |
+| `aws lambda invoke` | [lambda invoke](https://docs.aws.amazon.com/cli/latest/reference/lambda/invoke.html) |
+| `aws lambda get-function` | [lambda get-function](https://docs.aws.amazon.com/cli/latest/reference/lambda/get-function.html) |
+| `aws lambda add-permission` | [lambda add-permission](https://docs.aws.amazon.com/cli/latest/reference/lambda/add-permission.html) |
+| `aws sns create-topic` | [sns create-topic](https://docs.aws.amazon.com/cli/latest/reference/sns/create-topic.html) |
+| `aws sns list-topics` | [sns list-topics](https://docs.aws.amazon.com/cli/latest/reference/sns/list-topics.html) |
+| `aws sns subscribe` | [sns subscribe](https://docs.aws.amazon.com/cli/latest/reference/sns/subscribe.html) |
+| `aws logs put-metric-filter` | [logs put-metric-filter](https://docs.aws.amazon.com/cli/latest/reference/logs/put-metric-filter.html) |
+| `aws cloudwatch put-metric-alarm` | [cloudwatch put-metric-alarm](https://docs.aws.amazon.com/cli/latest/reference/cloudwatch/put-metric-alarm.html) |
