@@ -136,3 +136,25 @@ Expected result:
 
 - REST API, Cognito user pool, Lambda functions, and IAM role checks should return not-found style errors.
 - CloudWatch log group checks should return an empty `logGroups` list for each Lambda function.
+
+## References
+
+### AWS CLI Command References
+
+Every AWS CLI command used in this teardown is linked below to the direct AWS command reference page.
+
+| Command | AWS CLI reference |
+| --- | --- |
+| `aws apigateway get-rest-apis` | [apigateway get-rest-apis](https://docs.aws.amazon.com/cli/latest/reference/apigateway/get-rest-apis.html) |
+| `aws apigateway delete-rest-api` | [apigateway delete-rest-api](https://docs.aws.amazon.com/cli/latest/reference/apigateway/delete-rest-api.html) |
+| `aws apigateway get-rest-api` | [apigateway get-rest-api](https://docs.aws.amazon.com/cli/latest/reference/apigateway/get-rest-api.html) |
+| `aws cognito-idp list-user-pools` | [cognito-idp list-user-pools](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/list-user-pools.html) |
+| `aws cognito-idp delete-user-pool` | [cognito-idp delete-user-pool](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/delete-user-pool.html) |
+| `aws cognito-idp describe-user-pool` | [cognito-idp describe-user-pool](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/describe-user-pool.html) |
+| `aws lambda delete-function` | [lambda delete-function](https://docs.aws.amazon.com/cli/latest/reference/lambda/delete-function.html) |
+| `aws lambda get-function` | [lambda get-function](https://docs.aws.amazon.com/cli/latest/reference/lambda/get-function.html) |
+| `aws logs delete-log-group` | [logs delete-log-group](https://docs.aws.amazon.com/cli/latest/reference/logs/delete-log-group.html) |
+| `aws logs describe-log-groups` | [logs describe-log-groups](https://docs.aws.amazon.com/cli/latest/reference/logs/describe-log-groups.html) |
+| `aws iam detach-role-policy` | [iam detach-role-policy](https://docs.aws.amazon.com/cli/latest/reference/iam/detach-role-policy.html) |
+| `aws iam delete-role` | [iam delete-role](https://docs.aws.amazon.com/cli/latest/reference/iam/delete-role.html) |
+| `aws iam get-role` | [iam get-role](https://docs.aws.amazon.com/cli/latest/reference/iam/get-role.html) |

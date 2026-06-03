@@ -143,3 +143,29 @@ aws dynamodb list-tables --region "$AWS_REGION" \
 aws cognito-idp list-user-pools --max-results 60 --region "$AWS_REGION" \
   --query "UserPools[?Name=='${USER_POOL_NAME}']"
 ```
+
+## References
+
+### AWS CLI Command References
+
+Every AWS CLI command used in this teardown is linked below to the direct AWS command reference page.
+
+| Command | AWS CLI reference |
+| --- | --- |
+| `aws apigatewayv2 get-apis` | [apigatewayv2 get-apis](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/get-apis.html) |
+| `aws apigatewayv2 delete-api` | [apigatewayv2 delete-api](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/delete-api.html) |
+| `aws cloudwatch delete-alarms` | [cloudwatch delete-alarms](https://docs.aws.amazon.com/cli/latest/reference/cloudwatch/delete-alarms.html) |
+| `aws cognito-idp list-user-pools` | [cognito-idp list-user-pools](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/list-user-pools.html) |
+| `aws cognito-idp delete-user-pool` | [cognito-idp delete-user-pool](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/delete-user-pool.html) |
+| `aws dynamodb delete-table` | [dynamodb delete-table](https://docs.aws.amazon.com/cli/latest/reference/dynamodb/delete-table.html) |
+| `aws dynamodb list-tables` | [dynamodb list-tables](https://docs.aws.amazon.com/cli/latest/reference/dynamodb/list-tables.html) |
+| `aws iam delete-role-policy` | [iam delete-role-policy](https://docs.aws.amazon.com/cli/latest/reference/iam/delete-role-policy.html) |
+| `aws iam detach-role-policy` | [iam detach-role-policy](https://docs.aws.amazon.com/cli/latest/reference/iam/detach-role-policy.html) |
+| `aws iam delete-role` | [iam delete-role](https://docs.aws.amazon.com/cli/latest/reference/iam/delete-role.html) |
+| `aws lambda delete-function` | [lambda delete-function](https://docs.aws.amazon.com/cli/latest/reference/lambda/delete-function.html) |
+| `aws lambda list-functions` | [lambda list-functions](https://docs.aws.amazon.com/cli/latest/reference/lambda/list-functions.html) |
+| `aws logs delete-metric-filter` | [logs delete-metric-filter](https://docs.aws.amazon.com/cli/latest/reference/logs/delete-metric-filter.html) |
+| `aws logs delete-log-group` | [logs delete-log-group](https://docs.aws.amazon.com/cli/latest/reference/logs/delete-log-group.html) |
+| `aws scheduler delete-schedule` | [scheduler delete-schedule](https://docs.aws.amazon.com/cli/latest/reference/scheduler/delete-schedule.html) |
+| `aws sns list-topics` | [sns list-topics](https://docs.aws.amazon.com/cli/latest/reference/sns/list-topics.html) |
+| `aws sns delete-topic` | [sns delete-topic](https://docs.aws.amazon.com/cli/latest/reference/sns/delete-topic.html) |
