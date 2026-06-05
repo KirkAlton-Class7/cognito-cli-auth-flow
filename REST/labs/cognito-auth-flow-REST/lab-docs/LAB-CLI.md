@@ -208,7 +208,7 @@ ls -lh jedi-python.zip sith-node.zip
 
 Packaging confirmation:
 
-![Package Lambda ZIP files](../../../../assets/temp/104-3-package-lambdas.png)
+![Package Lambda ZIP files](/assets/temp/104-3-package-lambdas.png)
 
 ## 4. Create The Lambda Functions
 
@@ -257,7 +257,7 @@ echo "$SITH_FUNCTION_ARN"
 
 Function ARN export validation:
 
-![Export function ARNs and validate](../../../../assets/temp/120-4-export-function-arns-and-validate.png)
+![Export function ARNs and validate](/assets/temp/120-4-export-function-arns-and-validate.png)
 
 ## 5. Test Lambda Directly
 
@@ -282,7 +282,7 @@ Jedi route returns 200 and a Python Jedi Council message.
 
 Jedi Python invoke success:
 
-![Jedi Python invoke success](../../../../assets/temp/028-5-invoke-jedi-python-success.png)
+![Jedi Python invoke success](/assets/temp/028-5-invoke-jedi-python-success.png)
 
 Invoke the Node Lambda:
 
@@ -305,7 +305,7 @@ Sith route returns 200 and a Node Sith message.
 
 Sith Node invoke success:
 
-![Sith Node invoke success](../../../../assets/temp/024-5-invoke-sith-node-success.png)
+![Sith Node invoke success](/assets/temp/024-5-invoke-sith-node-success.png)
 
 ## 6. Create The REST API And Resources
 
@@ -479,7 +479,7 @@ HTTP/2 200
 
 Both unprotected route tests:
 
-![Unprotected API path tests](../../../../assets/temp/015-test-api-paths-without-authorizer-png.png)
+![Unprotected API path tests](/assets/temp/015-test-api-paths-without-authorizer-png.png)
 
 Validation:
 
@@ -618,26 +618,26 @@ echo "$CLIENT_JSON" | jq '{ClientName,ExplicitAuthFlows,AccessTokenValidity,IdTo
 
 If you try to view the login page before creating a style, you may see this browser error:
 
-![Login page error before style setup](../../../../assets/temp/044-10-login-page-error.png)
+![Login page error before style setup](/assets/temp/044-10-login-page-error.png)
 
-![Select create style](../../../../assets/temp/116-10-select-create-style.png)
+![Select create style](/assets/temp/116-10-select-create-style.png)
 
 4. Select `chewbacca-auth-rest-cli-client`.
 
-![Select CLI app client for login style](../../../../assets/temp/067-10-login-style-select-cli-app-client.png)
+![Select CLI app client for login style](/assets/temp/067-10-login-style-select-cli-app-client.png)
 
 5. Click **Create**.
 
-![Login style creation success](../../../../assets/temp/017-10-login-style-cli-app-creation-success.png)
+![Login style creation success](/assets/temp/017-10-login-style-cli-app-creation-success.png)
 
 6. Click the **Assigned app client** to return to the app client page.
 7. Click **View login page**.
 
-![Select view login page](../../../../assets/temp/094-10-cli-app-client-select-view-login-page.png)
+![Select view login page](/assets/temp/094-10-cli-app-client-select-view-login-page.png)
 
 8. Confirm the CLI app client login page opens.
 
-![CLI app client login page](../../../../assets/temp/095-10-cli-app-client-login-page.png)
+![CLI app client login page](/assets/temp/095-10-cli-app-client-login-page.png)
 
 ## 12. Create The Test User
 
@@ -746,7 +746,7 @@ aws apigateway get-authorizer \
   --region "$AWS_REGION"
 ```
 
-![Validate authorizer](../../../../assets/temp/006-12-cli-validate-authroizer.png)
+![Validate authorizer](/assets/temp/006-12-cli-validate-authroizer.png)
 
 ## 14. Test Authorizer Enforcement Without A Token
 
@@ -769,7 +769,7 @@ HTTP/2 401
 
 Unauthorized response confirmation:
 
-![Authorizer enforcement without token](../../../../assets/temp/119-13-test-authorizer-enforcement-no-token.png)
+![Authorizer enforcement without token](/assets/temp/119-13-test-authorizer-enforcement-no-token.png)
 
 Validation:
 
@@ -803,11 +803,11 @@ echo "${SECRET_HASH:0:20}"
 
 Secret hash generation:
 
-![Generate secret hash manually](../../../../assets/temp/050-14-cli-generate-secret-hash.png)
+![Generate secret hash manually](/assets/temp/050-14-cli-generate-secret-hash.png)
 
 Secret hash export confirmation:
 
-![Export secret hash](../../../../assets/temp/085-screenshot-2026-06-04-at-11-39-46-am.png)
+![Export secret hash](/assets/temp/085-screenshot-2026-06-04-at-11-39-46-am.png)
 
 ### 15.1 Enroll TOTP With A Temporary Access Token
 
@@ -823,7 +823,7 @@ aws cognito-idp initiate-auth \
 
 Initial TOTP setup attempt:
 
-![Initial TOTP MFA setup attempt](../../../../assets/temp/060-14-1initial-totp-mfa.png)
+![Initial TOTP MFA setup attempt](/assets/temp/060-14-1initial-totp-mfa.png)
 
 Export the temporary access token:
 
@@ -855,13 +855,13 @@ Expected:
 
 Associate software token:
 
-![Associate software token](../../../../assets/temp/019-1-2-associate-software-token.png)
+![Associate software token](/assets/temp/019-1-2-associate-software-token.png)
 
 Copy `SecretCode` into your authenticator app to store the shared secret and generate TOTP codes for future authentication.
 
-![Add Secret Code to Authenticator](../../../../assets/temp/115-11-desktop-authenticator-setup.png)
+![Add Secret Code to Authenticator](/assets/temp/115-11-desktop-authenticator-setup.png)
 
-![TOTP Codes in Authenticator](../../../../assets/temp/101-11-desktop-authenticator-code-generated.png)
+![TOTP Codes in Authenticator](/assets/temp/101-11-desktop-authenticator-code-generated.png)
 
 
 Verify the software token with a valid TOTP code from your authenticator app:
@@ -886,7 +886,7 @@ Expected:
 
 Verify software token:
 
-![Verify software token](../../../../assets/temp/114-1-3-verify-software-token.png)
+![Verify software token](/assets/temp/114-1-3-verify-software-token.png)
 
 Set software token MFA as preferred:
 
@@ -909,37 +909,37 @@ This alternate path uses the hosted Cognito login page to enroll the same softwa
 
 1. Open **View login page** from the CLI app client.
 
-![View CLI app client login page](../../../../assets/temp/076-11-cli-app-client-view-login-page.png)
+![View CLI app client login page](/assets/temp/076-11-cli-app-client-view-login-page.png)
 
 2. Sign in with username `chewbacca` and the temporary password.
 
-![CLI app sign-in](../../../../assets/temp/011-11-cli-app-signin.png)
+![CLI app sign-in](/assets/temp/011-11-cli-app-signin.png)
 
-![CLI app sign-in screen](../../../../assets/temp/096-11-cli-app-sign-in.png)
+![CLI app sign-in screen](/assets/temp/096-11-cli-app-sign-in.png)
 
 3. Change the temporary password to the permanent password exported earlier.
 
-![CLI app change password](../../../../assets/temp/052-11-cli-app-change-password.png)
+![CLI app change password](/assets/temp/052-11-cli-app-change-password.png)
 
 If the challenge session expires while you are learning the flow, restart the hosted login sequence and continue with a newly generated authenticator code.
 
-![Session expired warning](../../../../assets/temp/110-11-session-expired-error.png)
+![Session expired warning](/assets/temp/110-11-session-expired-error.png)
 
 4. Continue to authenticator app setup.
 
-![Set up authenticator app](../../../../assets/temp/025-11-set-up-authenticator-app.png)
+![Set up authenticator app](/assets/temp/025-11-set-up-authenticator-app.png)
 
 5. Scan the QR code or click **Show secret key** and add the key manually to your authenticator app.
 
-![Desktop authenticator setup](../../../../assets/temp/115-11-desktop-authenticator-setup.png)
+![Desktop authenticator setup](/assets/temp/115-11-desktop-authenticator-setup.png)
 
 6. Use a valid TOTP code from your authenticator app.
 
-![Desktop authenticator code generated](../../../../assets/temp/101-11-desktop-authenticator-code-generated.png)
+![Desktop authenticator code generated](/assets/temp/101-11-desktop-authenticator-code-generated.png)
 
 7. Complete sign-in.
 
-![Successful sign-in](../../../../assets/temp/034-11-successful-sign-in.png)
+![Successful sign-in](/assets/temp/034-11-successful-sign-in.png)
 
 After this path, continue with `USER_AUTH`. You do not need to repeat the CLI software-token enrollment commands unless you want to practice both methods.
 
@@ -976,7 +976,7 @@ echo "${SESSION:0:20}"
 
 `USER_AUTH` returns `SELECT_CHALLENGE`:
 
-![Start USER_AUTH and receive SELECT_CHALLENGE](../../../../assets/temp/106-screenshot-2026-06-04-at-11-40-55-am.png)
+![Start USER_AUTH and receive SELECT_CHALLENGE](/assets/temp/106-screenshot-2026-06-04-at-11-40-55-am.png)
 
 ### 15.4 Answer `SELECT_CHALLENGE` With `PASSWORD`
 
@@ -1011,7 +1011,7 @@ export SESSION=$(echo "$PASSWORD_CHALLENGE_RESPONSE" | jq -r '.Session')
 
 `SELECT_CHALLENGE` answered with `PASSWORD`:
 
-![Answer SELECT_CHALLENGE with PASSWORD](../../../../assets/temp/081-screenshot-2026-06-04-at-11-42-52-am.png)
+![Answer SELECT_CHALLENGE with PASSWORD](/assets/temp/081-screenshot-2026-06-04-at-11-42-52-am.png)
 
 ### 15.5 Respond To `SOFTWARE_TOKEN_MFA`
 
@@ -1032,7 +1032,7 @@ echo "$MFA_RESPONSE" | jq
 
 MFA challenge response:
 
-![Respond to SOFTWARE_TOKEN_MFA](../../../../assets/temp/086-screenshot-2026-06-04-at-11-43-37-am.png)
+![Respond to SOFTWARE_TOKEN_MFA](/assets/temp/086-screenshot-2026-06-04-at-11-43-37-am.png)
 
 Export tokens:
 
@@ -1048,11 +1048,11 @@ echo "${REFRESH_TOKEN:0:24}"
 
 Returned token export:
 
-![Export returned tokens](../../../../assets/temp/108-screenshot-2026-06-04-at-11-44-11-am.png)
+![Export returned tokens](/assets/temp/108-screenshot-2026-06-04-at-11-44-11-am.png)
 
 Authentication result:
 
-![MFA response with AuthenticationResult](../../../../assets/temp/022-screenshot-2026-06-04-at-12-17-40-pm.png)
+![MFA response with AuthenticationResult](/assets/temp/022-screenshot-2026-06-04-at-12-17-40-pm.png)
 
 > [!IMPORTANT]
 > Use `$ACCESS_TOKEN` for the scoped API Gateway method tests. The ID token is still useful for inspecting identity claims, but it is not the token to send when method authorization scopes are configured.
@@ -1085,7 +1085,7 @@ export COGNITO_PUBLIC_CLIENT_ID=$(aws cognito-idp list-user-pool-clients \
 
 Public app client lookup for token helper scripts:
 
-![Create public helper client](../../../../assets/temp/047-screenshot-2026-06-04-at-11-46-54-am.png)
+![Create public helper client](/assets/temp/047-screenshot-2026-06-04-at-11-46-54-am.png)
 
 Install dependencies for token helper scripts:
 
@@ -1099,7 +1099,7 @@ python -m pip install -r shared/scripts/requirements.txt
 
 Token helper script dependency install:
 
-![Install helper script dependencies](../../../../assets/temp/069-screenshot-2026-06-04-at-11-47-12-am.png)
+![Install helper script dependencies](/assets/temp/069-screenshot-2026-06-04-at-11-47-12-am.png)
 
 Run the `easier_get_token.py` script:
 
@@ -1109,15 +1109,15 @@ python shared/scripts/easier_get_token.py
 
 `easier_get_token.py` run output:
 
-![Export helper script values and run easier_get_token](../../../../assets/temp/102-screenshot-2026-06-04-at-11-57-50-am.png)
+![Export helper script values and run easier_get_token](/assets/temp/102-screenshot-2026-06-04-at-11-57-50-am.png)
 
 `easier_get_token.py` token response:
 
-![Easier token helper output](../../../../assets/temp/113-screenshot-2026-06-04-at-12-08-49-pm.png)
+![Easier token helper output](/assets/temp/113-screenshot-2026-06-04-at-12-08-49-pm.png)
 
 `easier_get_token.py` token output:
 
-![Easier token helper token output](../../../../assets/temp/008-screenshot-2026-06-04-at-12-10-54-pm.png)
+![Easier token helper token output](/assets/temp/008-screenshot-2026-06-04-at-12-10-54-pm.png)
 
 Run the `flavor_get_token.py` script:
 
@@ -1127,7 +1127,7 @@ python shared/scripts/flavor_get_token.py
 
 `flavor_get_token.py` script output:
 
-![Run flavor_get_token](../../../../assets/temp/035-screenshot-2026-06-04-at-11-59-07-am.png)
+![Run flavor_get_token](/assets/temp/035-screenshot-2026-06-04-at-11-59-07-am.png)
 
 The `flavor_get_token.py` script should decode token claims and print curl examples for:
 
@@ -1138,15 +1138,15 @@ ${API_BASE}/sith
 
 Curl examples from `flavor_get_token.py`:
 
-![Helper-generated curl examples](../../../../assets/temp/003-screenshot-2026-06-04-at-11-59-33-am.png)
+![Helper-generated curl examples](/assets/temp/003-screenshot-2026-06-04-at-11-59-33-am.png)
 
 Access token claims:
 
-![Access token claims](../../../../assets/temp/055-screenshot-2026-06-04-at-11-59-44-am.png)
+![Access token claims](/assets/temp/055-screenshot-2026-06-04-at-11-59-44-am.png)
 
 Token helper script API test with access token:
 
-![Helper API test with access token](../../../../assets/temp/012-screenshot-2026-06-04-at-12-00-02-pm.png)
+![Helper API test with access token](/assets/temp/012-screenshot-2026-06-04-at-12-00-02-pm.png)
 
 > [!NOTE]
 > These token helper scripts are convenience tools after the learning pass. If the selected app client has a secret, the script flow will fail because these scripts do not send `SECRET_HASH`.
@@ -1183,11 +1183,11 @@ HTTP/2 200
 
 Protected route tests:
 
-![Protected Jedi and Sith routes with access token](../../../../assets/temp/054-screenshot-2026-06-04-at-12-01-57-pm.png)
+![Protected Jedi and Sith routes with access token](/assets/temp/054-screenshot-2026-06-04-at-12-01-57-pm.png)
 
 Protected Jedi route returns HTTP 200:
 
-![Protected Jedi route returns HTTP 200](../../../../assets/temp/009-screenshot-2026-06-04-at-12-08-19-pm.png)
+![Protected Jedi route returns HTTP 200](/assets/temp/009-screenshot-2026-06-04-at-12-08-19-pm.png)
 
 Validation:
 
@@ -1221,7 +1221,7 @@ Expected:
 
 Direct flow shortcut response:
 
-![Direct flow shortcut to SOFTWARE_TOKEN_MFA](../../../../assets/temp/066-screenshot-2026-06-04-at-12-17-25-pm.png)
+![Direct flow shortcut to SOFTWARE_TOKEN_MFA](/assets/temp/066-screenshot-2026-06-04-at-12-17-25-pm.png)
 
 This shortcut is useful after the manual learning pass, but it does not teach the `SELECT_CHALLENGE` negotiation step.
 

@@ -667,26 +667,26 @@ Managed login gives you a user-facing way to complete sign-in and TOTP enrollmen
 
 If you try to view the login page before creating a style, you may see this browser error:
 
-![Login page error before style setup](../../assets/temp/044-10-login-page-error.png)
+![Login page error before style setup](/assets/temp/044-10-login-page-error.png)
 
-![Select create style](../../assets/temp/116-10-select-create-style.png)
+![Select create style](/assets/temp/116-10-select-create-style.png)
 
 4. Select `${PROJECT_NAME}-cli-client`.
 
-![Select CLI app client for login style](../../assets/temp/067-10-login-style-select-cli-app-client.png)
+![Select CLI app client for login style](/assets/temp/067-10-login-style-select-cli-app-client.png)
 
 5. Click **Create**.
 
-![Login style creation success](../../assets/temp/017-10-login-style-cli-app-creation-success.png)
+![Login style creation success](/assets/temp/017-10-login-style-cli-app-creation-success.png)
 
 6. Click the **Assigned app client** to return to the app client page.
 7. Click **View login page**.
 
-![Select view login page](../../assets/temp/094-10-cli-app-client-select-view-login-page.png)
+![Select view login page](/assets/temp/094-10-cli-app-client-select-view-login-page.png)
 
 8. Confirm the CLI app client login page opens.
 
-![CLI app client login page](../../assets/temp/095-10-cli-app-client-login-page.png)
+![CLI app client login page](/assets/temp/095-10-cli-app-client-login-page.png)
 
 ## 11. Create the Test User
 
@@ -978,37 +978,37 @@ This alternate path uses the hosted Cognito login page to enroll the same softwa
 
 1. Open **View login page** from the CLI app client.
 
-![View CLI app client login page](../../assets/temp/076-11-cli-app-client-view-login-page.png)
+![View CLI app client login page](/assets/temp/076-11-cli-app-client-view-login-page.png)
 
 2. Sign in with username `chewbacca` and the temporary or permanent password you set for the user.
 
-![CLI app sign-in](../../assets/temp/011-11-cli-app-signin.png)
+![CLI app sign-in](/assets/temp/011-11-cli-app-signin.png)
 
-![CLI app sign-in screen](../../assets/temp/096-11-cli-app-sign-in.png)
+![CLI app sign-in screen](/assets/temp/096-11-cli-app-sign-in.png)
 
 3. If Cognito prompts for a password change, change the temporary password to the permanent password exported earlier.
 
-![CLI app change password](../../assets/temp/052-11-cli-app-change-password.png)
+![CLI app change password](/assets/temp/052-11-cli-app-change-password.png)
 
 If the challenge session expires while you are learning the flow, restart the hosted login sequence and continue with a newly generated authenticator code.
 
-![Session expired warning](../../assets/temp/110-11-session-expired-error.png)
+![Session expired warning](/assets/temp/110-11-session-expired-error.png)
 
 4. Continue to authenticator app setup.
 
-![Set up authenticator app](../../assets/temp/025-11-set-up-authenticator-app.png)
+![Set up authenticator app](/assets/temp/025-11-set-up-authenticator-app.png)
 
 5. Scan the QR code or click **Show secret key** and add the key manually to your authenticator app.
 
-![Desktop authenticator setup](../../assets/temp/115-11-desktop-authenticator-setup.png)
+![Desktop authenticator setup](/assets/temp/115-11-desktop-authenticator-setup.png)
 
 6. Use a valid TOTP code from your authenticator app.
 
-![Desktop authenticator code generated](../../assets/temp/101-11-desktop-authenticator-code-generated.png)
+![Desktop authenticator code generated](/assets/temp/101-11-desktop-authenticator-code-generated.png)
 
 7. Complete sign-in.
 
-![Successful sign-in](../../assets/temp/034-11-successful-sign-in.png)
+![Successful sign-in](/assets/temp/034-11-successful-sign-in.png)
 
 After this path, continue with `USER_AUTH`. You do not need to repeat the CLI software-token enrollment commands unless you want to practice both methods.
 

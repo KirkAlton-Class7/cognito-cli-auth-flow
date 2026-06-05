@@ -48,7 +48,7 @@ Chewbacca test user
 | [../../docs/RUNBOOK-CONSOLE.md](../../docs/RUNBOOK-CONSOLE.md) | Lean Console reference for the same REST flow. |
 | [../../../shared/lambda-code/](../../../shared/lambda-code/) | Shared Jedi and Sith Lambda source. |
 | [../../../shared/scripts/](../../../shared/scripts/) | Secret hash and token helper scripts. |
-| [../../../assets/temp/](../../../assets/temp/) | Screenshots used throughout the lab docs. |
+| [/assets/temp/](/assets/temp/) | Screenshots used throughout the lab docs. |
 
 ## Recommended Order
 
