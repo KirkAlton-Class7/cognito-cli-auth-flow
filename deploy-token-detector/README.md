@@ -1,7 +1,7 @@
-# Chewbacca Cognito Token Detector
+# Cognito Token Detector
 
-Token-use tracking extension for the Chewbacca Cognito CLI auth-flow lab.<br>
-Use the hands-on lab [here](../LABS/jedi-token-detector/README.md) if you want to practice making the code changes step by step.<br><br>
+Token-use tracking extension for the Cognito auth-flow lab.<br>
+Use the hands-on lab [here](labs/token-detector/LAB-README.md) if you want to practice making the code changes step by step.<br><br>
 
 This folder contains the ready code path for recording issued tokens, marking tokens used when either protected route is called, and scanning for stale unused tokens.
 
@@ -18,9 +18,9 @@ Start with one of the base API implementations:
 | Document | Use |
 | --- | --- |
 | [Full Runbook](docs/deploy-token-detector-runbook.md) | Add token tracking, route updates, detector Lambda, schedule, and alerting |
-| [REST Teardown](docs/TEARDOWN_REST.md) | Remove REST lab resources plus token-detector resources |
-| [HTTPS Teardown](docs/TEARDOWN_HTTPS.md) | Remove HTTPS lab resources plus token-detector resources |
-| [Lab Version](../LABS/jedi-token-detector/README.md) | Guided editing path for learning the same changes |
+| [REST Teardown](docs/TEARDOWN_REST.md) | Remove REST resources plus token-detector resources |
+| [HTTPS Teardown](docs/TEARDOWN_HTTPS.md) | Remove HTTPS resources plus token-detector resources |
+| [Lab Version](labs/token-detector/LAB-README.md) | Guided editing path for learning the same changes |
 
 ## Source Material
 

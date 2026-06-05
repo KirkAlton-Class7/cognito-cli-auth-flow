@@ -1,6 +1,6 @@
-# Chewbacca Cognito Auth Flow - HTTPS Version
+# Cognito Auth Flow - HTTPS Version
 
-HTTP API implementation of the Chewbacca Cognito CLI auth-flow lab.<br>
+HTTP API implementation of the Cognito auth-flow lab.<br>
 View the REST version [here](../REST/README.md) if you prefer that implementation.<br><br>
 
 This version uses API Gateway **HTTP API** routes with a built-in JWT authorizer. Build the infrastructure in the AWS Console, then use the CLI for the Cognito challenge flow, token handling, and protected route tests.
@@ -19,8 +19,11 @@ The runbook intentionally progresses through several CLI passes:
 | Document | Use |
 | --- | --- |
 | [Architecture](docs/architecture.md) | HTTP API request flow and authorization boundary |
-| [Full Runbook](docs/cognito-auth-flow-https-runbook.md) | Console infrastructure guide with CLI authentication and protected route validation |
-| [Teardown](docs/TEARDOWN_HTTPS.md) | Remove only the base HTTPS lab infrastructure |
+| [Runbook - CLI](docs/RUNBOOK-CLI.md) | Build and validate the HTTPS auth flow primarily with AWS CLI commands |
+| [Runbook - Console](docs/RUNBOOK-CONSOLE.md) | Build the HTTPS auth flow primarily in the AWS Console with CLI validation |
+| [Lab - CLI](labs/cognito-auth-flow-HTTPS/lab-docs/LAB-CLI.md) | Guided CLI-first learning path with deeper explanations |
+| [Lab - Console](labs/cognito-auth-flow-HTTPS/lab-docs/LAB-CONSOLE.md) | Guided Console-first learning path with deeper explanations |
+| [Teardown](docs/TEARDOWN_HTTPS.md) | Remove only the base HTTPS infrastructure |
 | [REST Version](../REST/README.md) | Companion REST API implementation |
 | [Shared Lambda Code](../shared/lambda-code/) | Jedi and Sith Lambda handlers |
 | [Secret Hash Helper](../shared/scripts/secret_hash.py) | Cognito `SECRET_HASH` helper |
@@ -41,7 +44,7 @@ Chewbacca CLI
 
 ## Get Started
 
-Use the [HTTPS runbook](docs/cognito-auth-flow-https-runbook.md) to build the infrastructure in the AWS Console and validate the authentication flow from the CLI. Work from `"$HOME/cognito-cli-auth-flow"` when packaging Lambda code or running helper scripts:
+Use either HTTPS runbook in `docs/` to build the infrastructure, or start from the [HTTPS lab README](labs/cognito-auth-flow-HTTPS/LAB-README.md) when you want the fuller learning path. Work from `"$HOME/cognito-cli-auth-flow"` when packaging Lambda code or running helper scripts:
 
 * Cognito user pool and app client
 * Chewbacca test user with software token MFA

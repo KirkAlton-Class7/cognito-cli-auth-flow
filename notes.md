@@ -624,7 +624,7 @@ export ACCESS_TOKEN=$(echo "$INITIAL_AUTH_RESPONSE" | jq -r '.AuthenticationResu
 ```
 
 > [!important]
-> The temporary `ACCESS_TOKEN` in this section is only used to enroll MFA. If the token expires before MFA setup is complete, re-run the `USER_PASSWORD_AUTH` command and export a fresh token.
+> The temporary `ACCESS_TOKEN` in this section is only used to enroll MFA. If the token expires before MFA setup is complete, re-run the `USER_PASSWORD_AUTH` command and export a newly generated token.
 
 Associate a software token:
 
@@ -703,7 +703,7 @@ Expected:
 Copy the `Session` from the `SELECT_CHALLENGE` response.
 
 > [!warning]
-> A Cognito `Session` belongs to one specific challenge chain. If you answer `SELECT_CHALLENGE` with a session from `USER_PASSWORD_AUTH`, an older run, another app client, or another user, Cognito can return `Invalid session due to a mismatched auth flow`. Restart from `initiate-auth --auth-flow USER_AUTH` and copy the fresh `Session` from that response.
+> A Cognito `Session` belongs to one specific challenge chain. If you answer `SELECT_CHALLENGE` with a session from `USER_PASSWORD_AUTH`, an older run, another app client, or another user, Cognito can return `Invalid session due to a mismatched auth flow`. Restart from `initiate-auth --auth-flow USER_AUTH` and copy the newly returned `Session` from that response.
 
 `respond-to-auth-challenge` answers Cognito's current prompt. In this step, `ANSWER="PASSWORD"` selects the password method from the available choices and supplies the user's password. If the password is accepted and MFA is enabled, Cognito returns a new `SOFTWARE_TOKEN_MFA` challenge session.
 
@@ -729,7 +729,7 @@ Expected:
 }
 ```
 
-Copy the new `Session` from the `SOFTWARE_TOKEN_MFA` response. Then use a fresh code from the authenticator app.
+Copy the new `Session` from the `SOFTWARE_TOKEN_MFA` response. Then use a valid TOTP code from the authenticator app.
 
 > [!warning]
 > Do not reuse the earlier `SELECT_CHALLENGE` session for MFA. The password challenge returns a new `Session`, and that new value is the only valid handoff into `SOFTWARE_TOKEN_MFA`.
@@ -962,7 +962,7 @@ python shared/scripts/flavor_get_token.py
 | --- | --- | --- |
 | `ACCESS_TOKEN` | API authorization token | HTTP API JWT authorizer test |
 | `ID_TOKEN` | User identity/profile token | REST API no-scope Cognito authorizer test |
-| `REFRESH_TOKEN` | Used to obtain fresh tokens | Do not send to API Gateway |
+| `REFRESH_TOKEN` | Used to obtain new tokens | Do not send to API Gateway |
 
 > [!tip]
 > If the REST API method has no OAuth scopes configured, test with `ID_TOKEN`. If method scopes are configured, test with `ACCESS_TOKEN` and confirm the required scope appears in the token.
@@ -973,7 +973,7 @@ python shared/scripts/flavor_get_token.py
 | --- | --- | --- |
 | MFA enrollment `ACCESS_TOKEN` | `associate-software-token`, `verify-software-token`, `set-user-mfa-preference` | Re-run the direct `USER_PASSWORD_AUTH` command and export a new temporary `ACCESS_TOKEN` |
 | Cognito challenge `SESSION` | `SELECT_CHALLENGE` and `SOFTWARE_TOKEN_MFA` responses | Restart the `USER_AUTH` flow from `initiate-auth` |
-| API route token | HTTP API `ACCESS_TOKEN` or REST API `ID_TOKEN` | Expires after 15 minutes. Re-run the auth flow, export a fresh token, and retry curl |
+| API route token | HTTP API `ACCESS_TOKEN` or scoped REST API `ACCESS_TOKEN` | Expires after 15 minutes. Re-run the auth flow, export a newly generated token, and retry curl |
 | Refresh token | Token renewal workflows outside this lab | Keep private. Do not send it to API Gateway |
 
 ## HTTP API Protected Route Pattern
@@ -1060,7 +1060,7 @@ Valid access token -> Lambda runs
 
 Resource links for this section: [REST APIs](https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-rest-api.html), [Cognito user pool authorizers for REST APIs](https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-integrate-with-cognito.html), and [REST API Lambda proxy integrations](https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html).
 
-REST API uses `apigateway` for CLI reference, but the intended lab setup is console-first.
+REST API uses `apigateway` for CLI reference. Use the Console-first or CLI-first lab path depending on how you want to practice the setup.
 
 Console path: **API Gateway** -> **Create API** -> **REST API** -> create the API from `API_NAME`, add `/jedi` and `/sith` resources, add `GET` methods, enable Lambda proxy integration, deploy to `prod`, then attach the Cognito User Pool authorizer.
 
@@ -1143,7 +1143,7 @@ curl -i \
 ```
 
 > [!note]
-> If REST API returns `{"message":"The incoming token has expired"}`, export a fresh `ID_TOKEN` before retesting. API Gateway rejected the request before Lambda ran.
+> If REST API returns `{"message":"The incoming token has expired"}`, export a newly generated `ACCESS_TOKEN` before retesting scoped methods. API Gateway rejected the request before Lambda ran.
 
 Manual token test:
 
@@ -1210,10 +1210,10 @@ The CLI flow is better for understanding raw challenge mechanics. Hosted UI is b
 | `InvalidParameterException` for `USER_AUTH` | App client does not allow `ALLOW_USER_AUTH` | Recreate/update client explicit auth flows |
 | `Invalid session due to a mismatched auth flow` | The `Session` came from the wrong auth flow, an older challenge chain, another app client, or another user | Restart from `initiate-auth --auth-flow USER_AUTH`, copy the fresh `SELECT_CHALLENGE` session, then use the new MFA session returned by the password step |
 | `NotAuthorizedException` | Wrong password, expired session, wrong secret hash | Restart auth from `initiate-auth` |
-| `CodeMismatchException` | MFA code expired or copied wrong | Wait for a fresh authenticator code |
+| `CodeMismatchException` | MFA code expired or copied wrong | Wait for a newly generated authenticator code |
 | `{"message":"The incoming token has expired"}` | API Gateway received an expired JWT | Re-run the auth flow and export a fresh route token |
 | HTTP API returns `401` | Missing/expired access token or wrong issuer/audience | Re-export `ACCESS_TOKEN` and verify authorizer config |
-| REST API returns `401` | Used access token on no-scope method, wrong user pool ARN, or stale deployment | Use `ID_TOKEN`, confirm authorizer, redeploy |
+| REST API returns `401` | Used ID token on a scoped method, wrong user pool ARN, missing scope, or stale deployment | Use `ACCESS_TOKEN` for scoped methods, confirm the authorizer and required scope, then redeploy |
 | `Authorizer name must be unique` | The REST API already has an authorizer with that name | Reuse the existing authorizer ID instead of creating a duplicate |
 | Lambda never logs | API Gateway rejected request before invocation | Check authorizer result before debugging Lambda |
 | REST method still public | Method was updated but stage was not redeployed | Run `create-deployment` again |
@@ -1227,10 +1227,10 @@ The CLI flow is better for understanding raw challenge mechanics. Hosted UI is b
 - [ ] Run the manual-first `USER_AUTH` flow and observe `SELECT_CHALLENGE`.
 - [ ] Copy the first `Session` value by hand into the `PASSWORD` challenge.
 - [ ] Copy the second `Session` value by hand into the `SOFTWARE_TOKEN_MFA` challenge.
-- [ ] Complete `SOFTWARE_TOKEN_MFA` with a fresh authenticator code.
+- [ ] Complete `SOFTWARE_TOKEN_MFA` with a valid TOTP code from your authenticator app.
 - [ ] Export `ACCESS_TOKEN`, `ID_TOKEN`, and `REFRESH_TOKEN`.
 - [ ] Call an HTTP API protected route with `ACCESS_TOKEN`.
-- [ ] Call a REST API protected route with `ID_TOKEN`.
+- [ ] Call a scoped REST API protected route with `ACCESS_TOKEN`.
 - [ ] Confirm Lambda logs appear only after authorization succeeds.
 - [ ] Explain why REST API changes require redeployment.
 

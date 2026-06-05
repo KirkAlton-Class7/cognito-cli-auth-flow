@@ -1,4 +1,4 @@
-# Chewbacca Cognito CLI Auth Flow
+# Cognito Auth Flow
 
 Basic AWS lab for learning Cognito authentication flows, JWT validation, API Gateway, and Lambda with a Chewbacca, Jedi, and Sith theme.
 
@@ -8,9 +8,9 @@ This repo is intentionally smaller than Tawny Port. It isolates the authenticati
 
 The lab demonstrates the same Cognito identity flow across two API Gateway implementations:
 
-* The AWS Console is used to create the user pool, app client, Lambda functions, API Gateway routes, and authorizers.
+* The runbooks and labs include Console-first and CLI-first paths for creating user pools, app clients, Lambda functions, API Gateway routes/resources, and authorizers.
 * The CLI walks through `USER_AUTH`, `SELECT_CHALLENGE`, `PASSWORD`, `SOFTWARE_TOKEN_MFA`, manual token inspection, exported token reuse, helper-script token retrieval, and route testing.
-* API Gateway protects simple Jedi and Sith Lambda routes after the console infrastructure is in place.
+* API Gateway protects simple Jedi and Sith Lambda routes after the infrastructure is in place.
 * Lambda only runs after API Gateway accepts the Cognito token.
 * CloudWatch proves whether the request actually reached the function.
 
@@ -19,7 +19,7 @@ Start with the API Gateway style you want to practice:
 * [HTTPS Version](HTTPS/README.md) (HTTP API JWT authorizer)
 * [REST Version](REST/README.md) (REST API Cognito User Pool authorizer)
 * [Token Detector](deploy-token-detector/README.md) (token-use tracking after a base auth flow exists)
-* [Unused Token Detector Lab](LABS/jedi-token-detector/README.md) (guided editing path for the token detector)
+* [Unused Token Detector Lab](deploy-token-detector/labs/token-detector/LAB-README.md) (guided editing path for the token detector)
 
 > [!IMPORTANT]
 > Use separate project names when running both versions. The runbooks already do this with `chewbacca-auth-http` and `chewbacca-auth-rest`, so both labs can exist in the same AWS account and region.
@@ -58,7 +58,7 @@ Both versions preserve the same user, challenge, MFA, and token flow. The differ
 | --- | --- | --- |
 | API Gateway type | HTTP API | REST API |
 | Authorizer type | HTTP API JWT authorizer | REST API Cognito User Pool authorizer |
-| Token used in the barebones route test | Cognito access token | Cognito ID token |
+| Token used in protected route tests | Cognito access token | Cognito access token when authorization scopes are configured |
 | CLI namespace | `apigatewayv2` | `apigateway` |
 | Route model | Routes such as `GET /jedi` | Resources and methods such as `/jedi` + `GET` |
 | Deployment behavior | Auto-deploy stage | Explicit deployment required after method changes |
@@ -69,7 +69,7 @@ Both versions preserve the same user, challenge, MFA, and token flow. The differ
 
 ## Build Mode
 
-Use the **AWS Console** for infrastructure creation:
+Use either the **AWS Console** or the matching **CLI runbook** for infrastructure creation:
 
 ```text
 IAM role
@@ -93,7 +93,7 @@ Export pass:
   export Session and JWT values
   repeat curl route tests quickly
 
-Helper script pass:
+Token helper script pass:
   create or use a public no-secret app client
   set up a local Python venv
   run easier_get_token.py for direct token retrieval
@@ -113,27 +113,39 @@ cognito-cli-auth-flow/
 │   │   ├── deploy-token-detector-runbook.md
 │   │   ├── TEARDOWN_HTTPS.md
 │   │   └── TEARDOWN_REST.md
+│   ├── labs/
+│   │   └── token-detector/
+│   │       ├── LAB-README.md
+│   │       ├── lab-docs/
+│   │       ├── quick-deployment/
+│   │       └── sandbox/
 │   ├── lambda-code/
 │   └── scripts/
 ├── HTTPS/
 │   ├── README.md
-│   └── docs/
-│       ├── cognito-auth-flow-https-runbook.md
-│       └── TEARDOWN_HTTPS.md
-├── LABS/
-│   └── jedi-token-detector/
-│       ├── README.md
-│       ├── docs/
-│       │   ├── jedi-token-detector-lab.md
-│       │   ├── TEARDOWN_HTTPS.md
-│       │   └── TEARDOWN_REST.md
-│       ├── quick-deployment/
-│       └── sandbox/
+│   ├── docs/
+│   │   ├── RUNBOOK-CLI.md
+│   │   ├── RUNBOOK-CONSOLE.md
+│   │   └── TEARDOWN_HTTPS.md
+│   └── labs/
+│       └── cognito-auth-flow-HTTPS/
+│           ├── LAB-README.md
+│           └── lab-docs/
+│               ├── LAB-CLI.md
+│               └── LAB-CONSOLE.md
 ├── REST/
 │   ├── README.md
-│   └── docs/
-│       ├── cognito-auth-flow-rest-runbook.md
-│       └── TEARDOWN_REST.md
+│   ├── architecture.md
+│   ├── docs/
+│   │   ├── RUNBOOK-CLI.md
+│   │   ├── RUNBOOK-CONSOLE.md
+│   │   └── TEARDOWN_REST.md
+│   └── labs/
+│       └── cognito-auth-flow-REST/
+│           ├── LAB-README.md
+│           └── lab-docs/
+│               ├── LAB-CLI.md
+│               └── LAB-CONSOLE.md
 └── shared/
     ├── lambda-code/
     │   ├── jedi_python.py

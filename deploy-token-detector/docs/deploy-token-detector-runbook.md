@@ -1,6 +1,6 @@
 # Unused Token Detector Runbook
 
-This runbook deploys token-use tracking and unused-token detection for the Chewbacca Cognito auth flow. Use the ready scripts and Lambda code in this folder, package them, deploy them, and validate the alert flow.
+This runbook deploys token-use tracking and unused-token detection for the Cognito auth flow. Use the ready scripts and Lambda code in this folder, package them, deploy them, and validate the alert flow.
 
 ## What This Deploys
 
@@ -340,7 +340,7 @@ aws cloudwatch put-metric-alarm \
 
 ## 8. Validate Token Tracking
 
-Run the token helper:
+Run the `get_token.py` script:
 
 ```bash
 cd "$REPO_ROOT"

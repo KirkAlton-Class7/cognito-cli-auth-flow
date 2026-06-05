@@ -1,4 +1,4 @@
-# Chewbacca Auth Flow - HTTPS Architecture
+# Cognito Auth Flow - HTTPS Architecture
 
 The HTTPS version uses API Gateway HTTP API with a built-in JWT authorizer. Cognito owns the user authentication flow. API Gateway validates the token before Lambda runs.
 

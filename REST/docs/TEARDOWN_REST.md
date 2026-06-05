@@ -1,4 +1,4 @@
-# REST Lab Teardown
+# REST Teardown
 
 Use this to tear down the base REST Cognito auth infrastructure. It does not remove token-detector resources.
 
