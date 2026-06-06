@@ -1,33 +1,90 @@
 # Unused Token Detector Lab
 
-This lab extends the Cognito auth flow by adding token-use telemetry and an unused-token detector. The goal is to practice editing code and seeing why each change exists. You can edit directly in AWS, but the recommended flow is to copy starter code into the sandbox, edit locally, then add the edited code in AWS and deploy. The quick-deployment files are provided as finished references after the manual path. Use the runbook when you want the concise quick deployment flow.
+## Purpose
 
-Ready code path lives in `../../../docs/deploy-token-detector-runbook.md`.
+Build the unused-token detector lab by editing starter files, then validate DynamoDB token records, route telemetry, detector logs, and CloudWatch/SNS alerting.
 
-## Theme Map
+### Details
 
-| Existing lab item | unused token detector name |
+Lab details:
+
+- DynamoDB token table keyed by `token_id`
+- Sandbox-edited token helper script that records issued tokens and prints `x-token-id` curl examples
+- Sandbox-edited Jedi and Sith route Lambdas that mark token records as used
+- Unused-token detector Lambda for stale token records
+- EventBridge schedule for recurring detector scans
+- CloudWatch metric filter, CloudWatch alarm, and SNS notification path for unused-token alerts
+- Manual editing practice that preserves the original Jedi and Sith routing behavior
+
+
+## Prerequisites
+
+### Dependencies
+
+#### Applications
+
+| Dependency | Requirement |
 | --- | --- |
-| `/prod/jedi` Python route | Jedi Council route |
-| `/prod/sith` Node route | Sith route |
-| Token tracking table | Jedi token holocron |
-| Unused token detector Lambda | unused token detector |
-| Alert topic | Jedi auth alerts |
+| AWS Console and browser | Create resources visually and complete browser-based login or validation steps. |
+| AWS CLI | Create, update, describe, validate, and tear down AWS resources. |
+| jq | Parse JSON responses and export generated IDs, tokens, or ARNs. |
+| Python 3 | Run helper scripts and package Python-based Lambda code when required. |
+| zip | Package Lambda source files for upload. |
+| curl | Validate API routes and HTTP responses. |
 
-## Lab Assets
+#### Infrastructure
 
-| Path | Purpose |
+| Dependency | Requirement |
 | --- | --- |
-| `sandbox/` | Empty student workspace. Copy starter files here, edit locally, then add the edited code in AWS. |
-| `sandbox/scripts/` | Local copies of helper scripts copied from `shared/scripts/`. |
-| `sandbox/lambda-code/` | Local copies of Lambda code copied from `shared/lambda-code/`, plus the new detector Lambda you create in this lab. |
-| `quick-deployment/get_token.py` | Finished token helper reference. |
-| `quick-deployment/jedi_python_token_tracker.py` | Finished Jedi Python route Lambda reference. |
-| `quick-deployment/sith_node_token_tracker.js` | Finished Sith Node route Lambda reference. |
-| `quick-deployment/unused_token_detector.py` | Finished detector Lambda reference. |
+| Working Cognito auth-flow deployment | Base REST or HTTPS deployment must already validate protected Jedi and Sith routes. |
+| DynamoDB access | Create a token table and allow route and detector Lambdas to read or update token records. |
+| CloudWatch and SNS access | Create metric filters, alarms, log groups, and notification topics. |
 
-> [!IMPORTANT]
-> Do not pre-fill `sandbox/` with the quick-deployment files. The sandbox is where students copy starter files from `shared/`, make the lab edits, then add the edited code in AWS.
+#### Access Requirements
+
+| Dependency | Requirement |
+| --- | --- |
+| AWS credentials | Use credentials with permission to manage Lambda, IAM, DynamoDB, EventBridge, CloudWatch, SNS, and the existing API deployment. |
+| Existing route Lambda ownership | Update the deployed Jedi and Sith route Lambdas without breaking their original route responses. |
+
+#### Upstream Components
+
+| Dependency | Requirement |
+| --- | --- |
+| Base API routes | `/prod/jedi` and `/prod/sith` must already work with Cognito authorization. |
+| Token helper flow | The token helper must be able to obtain Cognito tokens before token telemetry is added. |
+
+### Supporting Files
+
+| File | Use |
+| --- | --- |
+| [`../LAB-README.md`](../LAB-README.md) | Token detector lab overview and learning path. |
+| [`../env.example`](../env.example) | Lab value template copied to `.env` before detector work. |
+| [`../sandbox/sandbox-info.md`](../sandbox/sandbox-info.md) | Generic sandbox guidance for local edits and copied starter files. |
+| [`TEARDOWN_REST.md`](TEARDOWN_REST.md) | REST lab teardown including detector resources. |
+| [`TEARDOWN_HTTPS.md`](TEARDOWN_HTTPS.md) | HTTPS lab teardown including detector resources. |
+| [`../../quick-deployment/`](../quick-deployment/) | Finished reference files for comparison after manual edits. |
+| [`../../../../shared/scripts/`](../../../../shared/scripts/) | Original token helper scripts used as the logic base. |
+| [`../../../../shared/lambda-code/`](../../../../shared/lambda-code/) | Original Jedi and Sith Lambda route logic that must be preserved. |
+
+### Detection Flow
+
+```text
+Cognito issues JWT tokens
+        ↓
+Token helper records issued token metadata in DynamoDB
+        ↓
+Protected routes receive x-token-id after API Gateway authorization succeeds
+        ↓
+Jedi and Sith Lambdas mark matching token records as used
+        ↓
+unused_token_detector.py scans for old unused token records
+        ↓
+CloudWatch metric filters and SNS surface unused-token alerts
+```
+---
+
+# Preparation
 
 ## 1. Create And Load The Environment File
 
@@ -86,6 +143,11 @@ echo "$TOKEN_TABLE_NAME"
 echo "$TOKEN_DETECTOR_FUNCTION"
 echo "$API_BASE"
 ```
+
+
+---
+
+# Data Store And Permissions
 
 ## 2. Create The Jedi Token Holocron Table
 
@@ -189,6 +251,11 @@ aws iam put-role-policy \
   }" \
   --region "$AWS_REGION"
 ```
+
+
+---
+
+# Lambda Updates And Detector
 
 ## 4. Copy And Update The Token Helper In The Sandbox
 
@@ -514,6 +581,11 @@ used: true
 used_route: sith
 ```
 
+
+---
+
+# Scheduling And Alerting
+
 ## 6. Create The Unused Token Detector Lambda
 
 There is no starter detector Lambda in `shared/`; this is the new Lambda for the lab. Create it locally in the sandbox first, then add it in AWS and deploy it.
@@ -596,6 +668,11 @@ Create an alarm:
 | Missing data | Treat missing data as good |
 | Action | Send notification to `TOKEN_ALERT_TOPIC` |
 
+
+---
+
+# Testing
+
 ## 9. Practice The Detection Flow
 
 Run the `get_token.py` script and do not call either API route. Wait more than `TOKEN_UNUSED_MINUTES`, then invoke the detector or wait for the schedule.
@@ -614,6 +691,11 @@ Expected result:
 Token is marked used in DynamoDB
 Detector does not alert for that token
 ```
+
+
+---
+
+# Operations
 
 ## Validation Checklist
 
@@ -640,7 +722,7 @@ Use this checklist before you consider the token detector lab complete:
 - [ ] Create the SNS topic, CloudWatch metric filter, and CloudWatch alarm for unused-token alerts.
 - [ ] Run the lab teardown from the matching lab teardown file when you are ready to remove the detector resources.
 
-## Concept Takeaways
+## Key Concepts
 
 - Cognito can issue valid tokens that are never used against protected APIs; token issuance and token usage are different events.
 - DynamoDB gives each issued token a durable tracking record keyed by `token_id`.
@@ -655,38 +737,44 @@ Use this checklist before you consider the token detector lab complete:
 
 You are ready to leave this token detector lab when you can explain the full flow without looking:
 
-```text
-Cognito issues JWT tokens
-get_token.py records issued token metadata in DynamoDB
-Protected routes receive x-token-id after API Gateway authorization succeeds
-Jedi and Sith Lambdas mark matching token records as used
-unused_token_detector.py scans for old unused token records
-CloudWatch metric filters turn detector logs into alert signals
-SNS delivers the unused-token notification path
-```
+- [ ] Cognito issues JWT tokens
+- [ ] `get_token.py` records issued token metadata in DynamoDB
+- [ ] Protected routes receive `x-token-id` after API Gateway authorization succeeds
+- [ ] Jedi and Sith Lambdas mark matching token records as used
+- [ ] `unused_token_detector.py` scans for old unused token records
+- [ ] CloudWatch metric filters turn detector logs into alert signals
+- [ ] SNS delivers the unused-token notification path
+
+---
+
+# References
 
 ## References
 
-[Boto3 Documentation - put_item](https://docs.aws.amazon.com/boto3/latest/reference/services/dynamodb/table/put_item.html)  
-[Working With Items and Attributes in DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithItems.html)  
-[Filter Pattern Syntax for Metric Filters, Subscription Filters, Filter Log Events, and Live Tail](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/FilterAndPatternSyntax.html#regex-expressions)
+| Topic | References |
+| --- | --- |
+| Token records and DynamoDB item storage | [Boto3 DynamoDB put_item](https://docs.aws.amazon.com/boto3/latest/reference/services/dynamodb/table/put_item.html), [Working with DynamoDB items](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithItems.html), [DynamoDB data model](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.CoreComponents.html), [DynamoDB Time to Live](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/TTL.html) |
+| Lambda detector runtime and configuration | [AWS Lambda](https://docs.aws.amazon.com/lambda/latest/dg/welcome.html), [Lambda execution roles](https://docs.aws.amazon.com/lambda/latest/dg/lambda-intro-execution-role.html), [Lambda environment variables](https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html) |
+| CloudWatch metric filters and alarms | [CloudWatch Logs metric filters](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/MonitoringLogData.html), [Filter pattern syntax](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/FilterAndPatternSyntax.html), [Filter pattern syntax for metric filters, subscription filters, filter log events, and Live Tail](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/FilterAndPatternSyntax.html#regex-expressions), [CloudWatch alarms](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/AlarmThatSendsEmail.html) |
+| Notification and scheduled detection workflows | [Amazon SNS topics](https://docs.aws.amazon.com/sns/latest/dg/sns-create-topic.html), [Amazon SNS email notifications](https://docs.aws.amazon.com/sns/latest/dg/sns-email-notifications.html), [EventBridge scheduled rules](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-create-rule-schedule.html), [EventBridge Scheduler user guide](https://docs.aws.amazon.com/scheduler/latest/UserGuide/what-is-scheduler.html) |
 
-[Amazon DynamoDB data model](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.CoreComponents.html)  
-[EventBridge Scheduler user guide](https://docs.aws.amazon.com/scheduler/latest/UserGuide/what-is-scheduler.html)  
-[Amazon SNS topics](https://docs.aws.amazon.com/sns/latest/dg/sns-create-topic.html)  
-[CloudWatch metric filters](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/MonitoringLogData.html)
+## CLI Command References
 
-### AWS CLI Command References
+### General CLI References
 
-Every AWS CLI command used in this lab is linked below to the direct AWS command reference page.
+| Command | Reference |
+| --- | --- |
+| `python3` | [Python command line](https://docs.python.org/3/using/cmdline.html) |
+| `jq` | [jq manual](https://jqlang.github.io/jq/manual/) |
+
+
+### AWS CLI References
 
 | Command | AWS CLI reference |
 | --- | --- |
 | `aws sts get-caller-identity` | [sts get-caller-identity](https://docs.aws.amazon.com/cli/latest/reference/sts/get-caller-identity.html) |
-| `aws iam get-role` | [iam get-role](https://docs.aws.amazon.com/cli/latest/reference/iam/get-role.html) |
-| `aws iam put-role-policy` | [iam put-role-policy](https://docs.aws.amazon.com/cli/latest/reference/iam/put-role-policy.html) |
 | `aws dynamodb create-table` | [dynamodb create-table](https://docs.aws.amazon.com/cli/latest/reference/dynamodb/create-table.html) |
 | `aws dynamodb describe-table` | [dynamodb describe-table](https://docs.aws.amazon.com/cli/latest/reference/dynamodb/describe-table.html) |
+| `aws iam put-role-policy` | [iam put-role-policy](https://docs.aws.amazon.com/cli/latest/reference/iam/put-role-policy.html) |
 | `aws dynamodb get-item` | [dynamodb get-item](https://docs.aws.amazon.com/cli/latest/reference/dynamodb/get-item.html) |
-| `aws lambda create-function` | [lambda create-function](https://docs.aws.amazon.com/cli/latest/reference/lambda/create-function.html) |
 | `aws lambda invoke` | [lambda invoke](https://docs.aws.amazon.com/cli/latest/reference/lambda/invoke.html) |

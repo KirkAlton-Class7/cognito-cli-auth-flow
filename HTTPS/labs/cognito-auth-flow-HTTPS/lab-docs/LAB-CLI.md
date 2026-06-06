@@ -1,33 +1,112 @@
 # Cognito Auth Flow - HTTPS Lab - CLI
 
-This lab teaches the HTTPS/HTTP API implementation of the Cognito auth flow. You will build most resources with CLI commands when possible, and conceptual checkpoints will explain why each step matters.
+## Purpose
+
+Build the Cognito Auth Flow HTTP API lab with AWS CLI commands, then practice MFA enrollment, Cognito challenge responses, token helper scripts, and protected Jedi/Sith route validation.
+
+### Details
+
+Lab details:
+
+- Cognito User Pool and app clients for managed login, token helper scripts, and `SECRET_HASH` practice
+- Chewbacca test user with software-token MFA
+- Jedi Python Lambda and Sith Node.js Lambda route handlers
+- API Gateway HTTP API routes, Lambda integrations, JWT authorizer, and `prod` stage
+- Protected `/prod/jedi` and `/prod/sith` routes using Cognito-issued JWT access tokens
+- Manual `USER_AUTH`, `SELECT_CHALLENGE`, `PASSWORD`, and `SOFTWARE_TOKEN_MFA` practice path
+- Managed Login page, access-token route tests, CloudWatch validation evidence, and final concept checks
+
+
+## Prerequisites
+
+### Dependencies
+
+#### Applications
+
+| Dependency | Requirement |
+| --- | --- |
+| AWS CLI | Create, update, describe, validate, and tear down AWS resources. |
+| jq | Parse JSON responses and export generated IDs, tokens, or ARNs. |
+| Python 3 | Run helper scripts and package Python-based Lambda code when required. |
+| zip | Package Lambda source files for upload. |
+| curl | Validate API routes and HTTP responses. |
+
+#### Infrastructure
+
+| Dependency | Requirement |
+| --- | --- |
+| AWS account and region | Create the HTTPS lab resources in the intended account and region. |
+| IAM capability | Create roles, attach policies, and add Lambda invoke permissions. |
+| Local workspace | Copy `env.example` to `.env` and keep lab values grouped as resources are created. |
+
+#### Access Requirements
+
+| Dependency | Requirement |
+| --- | --- |
+| AWS credentials | Use credentials with permission to manage IAM, Lambda, API Gateway, Cognito, and CloudWatch. |
+| Authenticator app | Generate valid TOTP codes for software-token MFA practice. |
+| Lab sandbox when directed | Use sandbox folders for local edits or copied starter files instead of pre-filled quick deployments. |
+
+#### APIs And Services
+
+| Dependency | Requirement |
+| --- | --- |
+| Amazon Cognito | User Pool, app clients, software-token MFA, managed login, and auth challenge flows. |
+| AWS Lambda | Jedi Python and Sith Node.js route handlers. |
+| API Gateway HTTP API | Routes, Lambda integrations, stage configuration, and JWT authorizer. |
+| IAM | Execution roles and Lambda permissions. |
+| CloudWatch Logs | Evidence for direct Lambda invocation and authorized route execution. |
+
+### Supporting Files
+
+| File | Use |
+| --- | --- |
+| [`../env.example`](../env.example) | Lab value template copied to `.env` before building. |
+| [`../LAB-README.md`](../LAB-README.md) | Lab overview, path selection, asset map, and concept overview. |
+| [`LAB-CONSOLE.md`](LAB-CONSOLE.md) | Companion lab path for the same deployment. |
+| [`TEARDOWN_HTTPS.md`](TEARDOWN_HTTPS.md) | Lab teardown for resources created by this lab. |
+| [`../../../../shared/lambda-code/`](../../../../shared/lambda-code/) | Shared Jedi and Sith Lambda handlers copied or packaged during the lab. |
+| [`../../../../shared/scripts/`](../../../../shared/scripts/) | Secret hash and token helper scripts used after manual auth flow practice. |
+| [`../../../../requirements.txt`](../../../../requirements.txt) | Python dependencies for token helper scripts. |
+| [`../../../../assets/images/`](../../../../assets/images/) | Screenshots placed near matching lab steps. |
+
+### Authentication and Authorization Flow
+
+```text
+User initiates authentication with Amazon Cognito
+        ↓
+Cognito validates credentials and required MFA challenges
+        ↓
+Cognito issues JWT tokens
+        ↓
+Client sends an API request with an access token
+        ↓
+API Gateway validates the JWT signature, claims, and required scope
+        ↓
+Authorized requests are routed to the appropriate Lambda function
+        ↓
+Unauthorized requests are rejected by API Gateway
+        ↓
+CloudWatch logs and metrics provide visibility into request processing
+```
 
 This flow uses:
 
 - Chewbacca test user
 - Cognito User Pool
 - default public app client for token helper scripts
-- additional secret-bearing CLI app client for SECRET_HASH
-- USER_AUTH / SELECT_CHALLENGE
-- PASSWORD
-- SOFTWARE_TOKEN_MFA
+- additional secret-bearing CLI app client for `SECRET_HASH`
+- `USER_AUTH` and `SELECT_CHALLENGE`
+- `PASSWORD`
+- `SOFTWARE_TOKEN_MFA`
 - Cognito access token
 - API Gateway HTTP API JWT authorizer
-- protected /prod/jedi and /prod/sith Lambda routes
+- protected `/prod/jedi` and `/prod/sith` Lambda routes
 
 > [!IMPORTANT]
-> HTTP API routes are protected with a Cognito JWT authorizer. Use a newly generated Cognito **access token** for protected route tests. The HTTP API JWT authorizer validates the token issuer and audience before Lambda runs.
+> HTTP API JWT authorizers validate issuer, audience, token lifetime, and route authorization settings. Use the Cognito access token for protected route tests in this lab and runbook family.
 
-## Prerequisites
-
-Install or confirm these tools:
-
-```bash
-aws --version
-jq --version
-python3 --version
-zip --version
-```
+### Environment Checks
 
 Confirm AWS identity:
 
@@ -35,19 +114,15 @@ Confirm AWS identity:
 aws sts get-caller-identity
 ```
 
-Set the repo root:
+Set the repo root before running packaging, helper scripts, or validation commands:
 
 ```bash
 export REPO_ROOT="<COGNITO_CLI_AUTH_FLOW_REPO_ROOT>"
 cd "$REPO_ROOT"
 ```
+---
 
-Example:
-
-```bash
-export REPO_ROOT="/Users/kirk/devsecops/cognito-cli-auth-flow"
-cd "$REPO_ROOT"
-```
+# Preparation
 
 ## 1. Create And Load The Environment File
 
@@ -114,6 +189,11 @@ echo "AUTHORIZER_NAME=$AUTHORIZER_NAME"
 
 > [!NOTE]
 > Keep stable infrastructure values in `.env`. Keep short-lived values like `SESSION`, `TOTP_CODE`, `SECRET_HASH`, `ACCESS_TOKEN`, `ID_TOKEN`, `REFRESH_TOKEN`, and full auth responses in the terminal only.
+
+
+---
+
+# Lambda Foundation
 
 ## 2. Create Lambda Execution Roles
 
@@ -208,8 +288,8 @@ ls -lh jedi-python.zip sith-node.zip
 
 Packaging confirmation:
 
-# TODO: Updated Screenshot
-![Package Lambda ZIP files](/assets/images/095-package-lambda-zips.png)
+> TODO: Updated screenshot.
+![Package Lambda ZIP files](../../../../assets/images/095-package-lambda-zips.png)
 
 ## 4. Create The Lambda Functions
 
@@ -258,8 +338,8 @@ echo "$SITH_FUNCTION_ARN"
 
 Function ARN export validation:
 
-# TODO: Updated Screenshot
-![Export function ARNs and validate](/assets/images/110-validate-function-arns.png)
+> TODO: Updated screenshot.
+![Export function ARNs and validate](../../../../assets/images/110-validate-function-arns.png)
 
 ## 5. Test Lambda Directly
 
@@ -284,8 +364,8 @@ Jedi route returns 200 and a Python Jedi Council message.
 
 Jedi Python invoke success:
 
-# TODO: Updated Screenshot
-![Jedi Python invoke success](/assets/images/027-jedi-python-invoke-success.png)
+> TODO: Updated screenshot.
+![Jedi Python invoke success](../../../../assets/images/027-jedi-python-invoke-success.png)
 
 Invoke the Node Lambda:
 
@@ -308,8 +388,13 @@ Sith route returns 200 and a Node Sith message.
 
 Sith Node invoke success:
 
-# TODO: Updated Screenshot
-![Sith Node invoke success](/assets/images/023-sith-node-invoke-success.png)
+> TODO: Updated screenshot.
+![Sith Node invoke success](../../../../assets/images/023-sith-node-invoke-success.png)
+
+
+---
+
+# API Gateway Baseline
 
 ## 6. Create The HTTP API
 
@@ -449,14 +534,19 @@ Expected:
 
 Both unprotected route tests:
 
-# TODO: Updated Screenshot
-![Unprotected API route tests](/assets/images/015-unprotected-api-tests.png)
+> TODO: Updated screenshot.
+![Unprotected API route tests](../../../../assets/images/015-unprotected-api-tests.png)
 
 Validation:
 
 - API Gateway reaches both Lambda functions.
 - CloudWatch logs show API Gateway event payloads.
 - The event shape is different from the direct Lambda test payload.
+
+
+---
+
+# Cognito Identity Configuration
 
 ## 9. Create The Cognito User Pool
 
@@ -546,14 +636,18 @@ Create this app client only when you need to validate `SECRET_HASH` flows.
 
 Create the secret-bearing app client:
 
+> [!NOTE]
+> The command below uses Short-Lived Token Values: 5 minutes for the authentication flow session, 15 minutes for the access token, 15 minutes for the ID token, and 1 day for the refresh token. These values improve token visibility during the lab, but they also create timed pressure. To use Standard Token Values instead, change `--access-token-validity` and `--id-token-validity` to `60`.
+
 ```bash
 export CLIENT_JSON=$(aws cognito-idp create-user-pool-client \
   --user-pool-id "$USER_POOL_ID" \
   --client-name "$USER_POOL_CLIENT_NAME" \
   --generate-secret \
   --explicit-auth-flows ALLOW_USER_AUTH ALLOW_USER_PASSWORD_AUTH ALLOW_USER_SRP_AUTH ALLOW_REFRESH_TOKEN_AUTH \
-  --access-token-validity 60 \
-  --id-token-validity 60 \
+  --auth-session-validity 5 \
+  --access-token-validity 15 \
+  --id-token-validity 15 \
   --refresh-token-validity 1 \
   --token-validity-units AccessToken=minutes,IdToken=minutes,RefreshToken=days \
   --query 'UserPoolClient' \
@@ -592,32 +686,32 @@ echo "$CLIENT_JSON" | jq '{ClientName,ExplicitAuthFlows,AccessTokenValidity,IdTo
 
 If you try to view the login page before creating a style, you may see this browser error:
 
-# TODO: Updated Screenshot
-![Login page error before style setup](/assets/images/039-login-page-style-error.png)
+> TODO: Updated screenshot.
+![Login page error before style setup](../../../../assets/images/039-login-page-style-error.png)
 
-# TODO: Updated Screenshot
-![Select create style](/assets/images/106-select-create-login-style.png)
+> TODO: Updated screenshot.
+![Select create style](../../../../assets/images/106-select-create-login-style.png)
 
 4. Select `chewbacca-auth-http-cli-client`.
 
-# TODO: Updated Screenshot
-![Select CLI app client for login style](/assets/images/062-select-login-style-app-client.png)
+> TODO: Updated screenshot.
+![Select CLI app client for login style](../../../../assets/images/062-select-login-style-app-client.png)
 
 5. Click **Create**.
 
-# TODO: Updated Screenshot
-![Login style creation success](/assets/images/016-login-style-created.png)
+> TODO: Updated screenshot.
+![Login style creation success](../../../../assets/images/016-login-style-created.png)
 
 6. Click the **Assigned app client** to return to the app client page.
 7. Click **View login page**.
 
-# TODO: Updated Screenshot
-![Select view login page](/assets/images/086-select-view-login-page.png)
+> TODO: Updated screenshot.
+![Select view login page](../../../../assets/images/086-select-view-login-page.png)
 
 8. Confirm the CLI app client login page opens.
 
-# TODO: Updated Screenshot
-![CLI app client login page](/assets/images/087-app-client-login-page.png)
+> TODO: Updated screenshot.
+![CLI app client login page](../../../../assets/images/087-app-client-login-page.png)
 
 ## 12. Create The Test User
 
@@ -661,6 +755,11 @@ aws cognito-idp admin-get-user \
   --region "$AWS_REGION" \
   --query '{Username:Username,Status:UserStatus,Enabled:Enabled}'
 ```
+
+
+---
+
+# API Gateway Authorization
 
 ## 13. Add The HTTP API JWT Authorizer
 
@@ -729,8 +828,8 @@ aws apigatewayv2 update-route \
 
 Validate the authorizer screenshot:
 
-# TODO: Updated Screenshot
-![Validate authorizer](/assets/images/006-validate-authorizer.png)
+> TODO: Updated screenshot.
+![Validate authorizer](../../../../assets/images/006-validate-authorizer.png)
 
 Validation:
 
@@ -765,14 +864,19 @@ content-type: application/json
 
 Unauthorized response confirmation:
 
-# TODO: Updated Screenshot
-![Authorizer enforcement without token](/assets/images/109-authorizer-no-token-test.png)
+> TODO: Updated screenshot.
+![Authorizer enforcement without token](../../../../assets/images/109-authorizer-no-token-test.png)
 
 Validation:
 
 - Missing token returns `401` on both protected routes.
 - Lambda logs do not appear for the denied request.
 - If the request still returns `200`, the authorizer is not attached to the route or the latest API configuration is not active.
+
+
+---
+
+# Authentication And Route Testing
 
 ## 15. MFA Enrollment And Manual Authentication Flow
 
@@ -800,13 +904,13 @@ echo "${SECRET_HASH:0:20}"
 
 Secret hash generation:
 
-# TODO: Updated Screenshot
-![Generate secret hash manually](/assets/images/045-generate-secret-hash.png)
+> TODO: Updated screenshot.
+![Generate secret hash manually](../../../../assets/images/045-generate-secret-hash.png)
 
 Secret hash export confirmation:
 
-# TODO: Updated Screenshot
-![Export secret hash](/assets/images/079-export-secret-hash.png)
+> TODO: Updated screenshot.
+![Export secret hash](../../../../assets/images/079-export-secret-hash.png)
 
 ### 15.1 Enroll TOTP With A Temporary Access Token
 
@@ -822,8 +926,8 @@ aws cognito-idp initiate-auth \
 
 Initial TOTP setup attempt:
 
-# TODO: Updated Screenshot
-![Initial TOTP MFA setup attempt](/assets/images/055-initial-totp-mfa-attempt.png)
+> TODO: Updated screenshot.
+![Initial TOTP MFA setup attempt](../../../../assets/images/055-initial-totp-mfa-attempt.png)
 
 Export the temporary access token:
 
@@ -855,16 +959,16 @@ Expected:
 
 Associate software token:
 
-# TODO: Updated Screenshot
-![Associate software token](/assets/images/018-associate-software-token.png)
+> TODO: Updated screenshot.
+![Associate software token](../../../../assets/images/018-associate-software-token.png)
 
 Copy `SecretCode` into your authenticator app to store the shared secret and generate TOTP codes for future authentication.
 
-# TODO: Updated Screenshot
-![Add Secret Code to Authenticator](/assets/images/105-authenticator-secret-setup.png)
+> TODO: Updated screenshot.
+![Add Secret Code to Authenticator](../../../../assets/images/105-authenticator-secret-setup.png)
 
-# TODO: Updated Screenshot
-![TOTP Codes in Authenticator](/assets/images/092-authenticator-code-generated.png)
+> TODO: Updated screenshot.
+![TOTP Codes in Authenticator](../../../../assets/images/092-authenticator-code-generated.png)
 
 
 Verify the software token with a valid TOTP code from your authenticator app:
@@ -889,8 +993,8 @@ Expected:
 
 Verify software token:
 
-# TODO: Updated Screenshot
-![Verify software token](/assets/images/104-verify-software-token.png)
+> TODO: Updated screenshot.
+![Verify software token](../../../../assets/images/104-verify-software-token.png)
 
 Set software token MFA as preferred:
 
@@ -913,46 +1017,46 @@ This alternate flow uses the hosted Cognito login page to enroll the same softwa
 
 1. Open **View login page** from the CLI app client.
 
-# TODO: Updated Screenshot
-![View CLI app client login page](/assets/images/071-view-app-client-login-page.png)
+> TODO: Updated screenshot.
+![View CLI app client login page](../../../../assets/images/071-view-app-client-login-page.png)
 
 2. Sign in with username `chewbacca` and the temporary password.
 
-# TODO: Updated Screenshot
-![CLI app sign-in](/assets/images/011-app-client-sign-in.png)
+> TODO: Updated screenshot.
+![CLI app sign-in](../../../../assets/images/011-app-client-sign-in.png)
 
-# TODO: Updated Screenshot
-![CLI app sign-in screen](/assets/images/088-app-client-sign-in-screen.png)
+> TODO: Updated screenshot.
+![CLI app sign-in screen](../../../../assets/images/088-app-client-sign-in-screen.png)
 
 3. Change the temporary password to the permanent password exported earlier.
 
-# TODO: Updated Screenshot
-![CLI app change password](/assets/images/047-app-client-change-password.png)
+> TODO: Updated screenshot.
+![CLI app change password](../../../../assets/images/047-app-client-change-password.png)
 
 If the challenge session expires while you are learning the flow, restart the hosted login sequence and continue with a newly generated authenticator code.
 
-# TODO: Updated Screenshot
-![Session expired warning](/assets/images/100-session-expired-warning.png)
+> TODO: Updated screenshot.
+![Session expired warning](../../../../assets/images/100-session-expired-warning.png)
 
 4. Continue to authenticator app setup.
 
-# TODO: Updated Screenshot
-![Set up authenticator app](/assets/images/024-set-up-authenticator-app.png)
+> TODO: Updated screenshot.
+![Set up authenticator app](../../../../assets/images/024-set-up-authenticator-app.png)
 
 5. Scan the QR code or click **Show secret key** and add the key manually to your authenticator app.
 
-# TODO: Updated Screenshot
-![Desktop authenticator setup](/assets/images/105-authenticator-secret-setup.png)
+> TODO: Updated screenshot.
+![Desktop authenticator setup](../../../../assets/images/105-authenticator-secret-setup.png)
 
 6. Use a valid TOTP code from your authenticator app.
 
-# TODO: Updated Screenshot
-![Desktop authenticator code generated](/assets/images/092-authenticator-code-generated.png)
+> TODO: Updated screenshot.
+![Desktop authenticator code generated](../../../../assets/images/092-authenticator-code-generated.png)
 
 7. Complete sign-in.
 
-# TODO: Updated Screenshot
-![Successful sign-in](/assets/images/032-successful-sign-in.png)
+> TODO: Updated screenshot.
+![Successful sign-in](../../../../assets/images/032-successful-sign-in.png)
 
 After this flow, continue with `USER_AUTH`. You do not need to repeat the CLI software-token enrollment commands unless you want to practice both methods.
 
@@ -989,8 +1093,8 @@ echo "${SESSION:0:20}"
 
 `USER_AUTH` returns `SELECT_CHALLENGE`:
 
-# TODO: Updated Screenshot
-![Start USER_AUTH and receive SELECT_CHALLENGE](/assets/images/096-user-auth-select-challenge.png)
+> TODO: Updated screenshot.
+![Start USER_AUTH and receive SELECT_CHALLENGE](../../../../assets/images/096-user-auth-select-challenge.png)
 
 ### 15.4 Answer `SELECT_CHALLENGE` With `PASSWORD`
 
@@ -1025,8 +1129,8 @@ export SESSION=$(echo "$PASSWORD_CHALLENGE_RESPONSE" | jq -r '.Session')
 
 `SELECT_CHALLENGE` answered with `PASSWORD`:
 
-# TODO: Updated Screenshot
-![Answer SELECT_CHALLENGE with PASSWORD](/assets/images/075-select-challenge-password.png)
+> TODO: Updated screenshot.
+![Answer SELECT_CHALLENGE with PASSWORD](../../../../assets/images/075-select-challenge-password.png)
 
 ### 15.5 Respond To `SOFTWARE_TOKEN_MFA`
 
@@ -1047,8 +1151,8 @@ echo "$MFA_RESPONSE" | jq
 
 MFA challenge response:
 
-# TODO: Updated Screenshot
-![Respond to SOFTWARE_TOKEN_MFA](/assets/images/080-software-token-mfa-response.png)
+> TODO: Updated screenshot.
+![Respond to SOFTWARE_TOKEN_MFA](../../../../assets/images/080-software-token-mfa-response.png)
 
 Export tokens:
 
@@ -1064,13 +1168,13 @@ echo "${REFRESH_TOKEN:0:24}"
 
 Returned token export:
 
-# TODO: Updated Screenshot
-![Export returned tokens](/assets/images/098-export-returned-tokens.png)
+> TODO: Updated screenshot.
+![Export returned tokens](../../../../assets/images/098-export-returned-tokens.png)
 
 Authentication result:
 
-# TODO: Updated Screenshot
-![MFA response with AuthenticationResult](/assets/images/021-mfa-authentication-result.png)
+> TODO: Updated screenshot.
+![MFA response with AuthenticationResult](../../../../assets/images/021-mfa-authentication-result.png)
 
 > [!IMPORTANT]
 > Use `$ACCESS_TOKEN` for the protected HTTP API route tests. The ID token is still useful for inspecting identity claims, but the access token is the clearest token choice for these route checks.
@@ -1103,8 +1207,8 @@ export COGNITO_PUBLIC_CLIENT_ID=$(aws cognito-idp list-user-pool-clients \
 
 Public app client lookup for token helper scripts:
 
-# TODO: Updated Screenshot
-![Create public helper client](/assets/images/042-create-public-helper-client.png)
+> TODO: Updated screenshot.
+![Create public helper client](../../../../assets/images/042-create-public-helper-client.png)
 
 Install dependencies for token helper scripts:
 
@@ -1118,8 +1222,8 @@ python -m pip install -r requirements.txt
 
 Token helper script dependency install:
 
-# TODO: Updated Screenshot
-![Install helper script dependencies](/assets/images/064-install-helper-dependencies.png)
+> TODO: Updated screenshot.
+![Install helper script dependencies](../../../../assets/images/064-install-helper-dependencies.png)
 
 Run the `easier_get_token.py` script:
 
@@ -1129,18 +1233,18 @@ python shared/scripts/easier_get_token.py
 
 `easier_get_token.py` run output:
 
-# TODO: Updated Screenshot
-![Export helper script values and run easier_get_token](/assets/images/093-run-easier-get-token.png)
+> TODO: Updated screenshot.
+![Export helper script values and run easier_get_token](../../../../assets/images/093-run-easier-get-token.png)
 
 `easier_get_token.py` token response:
 
-# TODO: Updated Screenshot
-![Easier token helper output](/assets/images/103-easier-token-helper-output.png)
+> TODO: Updated screenshot.
+![Easier token helper output](../../../../assets/images/103-easier-token-helper-output.png)
 
 `easier_get_token.py` token output:
 
-# TODO: Updated Screenshot
-![Easier token helper token output](/assets/images/008-easier-token-output.png)
+> TODO: Updated screenshot.
+![Easier token helper token output](../../../../assets/images/008-easier-token-output.png)
 
 Run the `flavor_get_token.py` script:
 
@@ -1150,8 +1254,8 @@ python shared/scripts/flavor_get_token.py
 
 `flavor_get_token.py` script output:
 
-# TODO: Updated Screenshot
-![Run flavor_get_token](/assets/images/033-run-flavor-get-token.png)
+> TODO: Updated screenshot.
+![Run flavor_get_token](../../../../assets/images/033-run-flavor-get-token.png)
 
 The `flavor_get_token.py` script should decode token claims and print curl examples for:
 
@@ -1162,18 +1266,18 @@ ${API_BASE}/sith
 
 Curl examples from `flavor_get_token.py`:
 
-# TODO: Updated Screenshot
-![Helper-generated curl examples](/assets/images/003-helper-curl-examples.png)
+> TODO: Updated screenshot.
+![Helper-generated curl examples](../../../../assets/images/003-helper-curl-examples.png)
 
 Access token claims:
 
-# TODO: Updated Screenshot
-![Access token claims](/assets/images/050-access-token-claims.png)
+> TODO: Updated screenshot.
+![Access token claims](../../../../assets/images/050-access-token-claims.png)
 
 Token helper script API test with access token:
 
-# TODO: Updated Screenshot
-![Helper API test with access token](/assets/images/012-helper-access-token-api-test.png)
+> TODO: Updated screenshot.
+![Helper API test with access token](../../../../assets/images/012-helper-access-token-api-test.png)
 
 > [!NOTE]
 > These token helper scripts are convenience tools after the learning pass. If the selected app client has a secret, the script flow will fail because these scripts do not send `SECRET_HASH`.
@@ -1217,10 +1321,15 @@ Expected:
 
 Direct flow shortcut response:
 
-# TODO: Updated Screenshot
-![Direct flow shortcut to SOFTWARE_TOKEN_MFA](/assets/images/061-direct-flow-mfa-shortcut.png)
+> TODO: Updated screenshot.
+![Direct flow shortcut to SOFTWARE_TOKEN_MFA](../../../../assets/images/061-direct-flow-mfa-shortcut.png)
 
 This shortcut is useful after the manual learning pass, but it does not teach the `SELECT_CHALLENGE` negotiation step.
+
+
+---
+
+# Operations
 
 ## Troubleshooting
 
@@ -1262,7 +1371,7 @@ Use this checklist before you consider the HTTPS lab complete:
 - [ ] Confirm CloudWatch logs appear only after API Gateway authorization succeeds.
 - [ ] Run the lab teardown from `lab-docs/TEARDOWN_HTTPS.md` when you are ready to remove the lab resources.
 
-## Concept Takeaways
+## Key Concepts
 
 - Cognito owns user authentication, challenge negotiation, MFA validation, and JWT issuance.
 - `SECRET_HASH` proves knowledge of an app client secret; it does not replace the user password or MFA factor.
@@ -1276,33 +1385,48 @@ Use this checklist before you consider the HTTPS lab complete:
 
 ## Final Check
 
-You are ready to leave this HTTPS lab when you can explain the full flow without looking:
+You have mastered the concepts in this lab when you can explain:
 
-```text
-Chewbacca authenticates with Cognito
-Cognito negotiates PASSWORD and SOFTWARE_TOKEN_MFA challenges
-Cognito issues JWT tokens
-API Gateway HTTP API validates the access token with a JWT authorizer
-Authorized requests reach the Jedi and Sith Lambda routes
-Unauthorized requests stop at API Gateway
-CloudWatch proves which requests reached Lambda
-```
+- [ ] The purpose of Amazon Cognito and its role in user authentication
+- [ ] How PASSWORD and SOFTWARE_TOKEN_MFA challenges work during authentication
+- [ ] The purpose of access, ID, and refresh tokens and when each is used
+- [ ] How API Gateway validates JWT access tokens and authorization scopes
+- [ ] How authorization determines access to the Jedi and Sith API routes
+- [ ] Why unauthorized requests are blocked before reaching Lambda
+- [ ] How CloudWatch logs can be used to verify request processing and troubleshoot authorization issues
+- [ ] The [complete authentication and authorization flow](#authentication-and-authorization-flow) from user sign-in to Lambda execution
+
+---
+
+# References
 
 ## References
 
-* [Cognito authentication flows](https://docs.aws.amazon.com/cognito/latest/developerguide/authentication.html)
-* [Cognito MFA](https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-settings-mfa.html)
-* [API Gateway HTTP API JWT authorizers](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-jwt-authorizer.html)
-* [Lambda proxy integrations for HTTP APIs](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-develop-integrations-lambda.html)
+| Topic | References |
+| --- | --- |
+| Cognito user pool setup and managed login | [Cognito User Pools](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-identity-pools.html), [Managed login and hosted UI](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-hosted-ui-user-experience.html), [Managed login endpoints](https://docs.aws.amazon.com/cognito/latest/developerguide/managed-login-endpoints.html), [Managed login branding](https://docs.aws.amazon.com/cognito/latest/developerguide/managed-login-branding.html) |
+| Cognito direct authentication and MFA | [Cognito authentication flows](https://docs.aws.amazon.com/cognito/latest/developerguide/authentication.html), [Cognito MFA](https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-settings-mfa.html), [InitiateAuth API](https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_InitiateAuth.html), [RespondToAuthChallenge API](https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_RespondToAuthChallenge.html), [Computing secret hash values](https://docs.aws.amazon.com/cognito/latest/developerguide/signing-up-users-in-your-app.html#cognito-user-pools-computing-secret-hash) |
+| Cognito OAuth tokens and logout | [Authorization endpoint](https://docs.aws.amazon.com/cognito/latest/developerguide/authorization-endpoint.html), [Token endpoint](https://docs.aws.amazon.com/cognito/latest/developerguide/token-endpoint.html), [Logout endpoint](https://docs.aws.amazon.com/cognito/latest/developerguide/logout-endpoint.html) |
+| JWT claims, access tokens, and API authorization | [JWT introduction](https://jwt.io/introduction), [HTTP API JWT authorizers](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-jwt-authorizer.html) |
+| HTTP API routing and Lambda integration | [API Gateway HTTP APIs](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api.html), [HTTP API routes](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-develop-routes.html), [HTTP API stages](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-stages.html), [HTTP API Lambda integrations](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-develop-integrations-lambda.html), [Invoking Lambda with API Gateway](https://docs.aws.amazon.com/lambda/latest/dg/services-apigateway.html) |
+| Lambda runtime configuration and roles | [AWS Lambda](https://docs.aws.amazon.com/lambda/latest/dg/welcome.html), [Lambda execution roles](https://docs.aws.amazon.com/lambda/latest/dg/lambda-intro-execution-role.html), [Lambda environment variables](https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html) |
+| CloudWatch validation evidence | [CloudWatch Logs for Lambda](https://docs.aws.amazon.com/lambda/latest/dg/monitoring-cloudwatchlogs.html) |
 
-* [Amazon Cognito InitiateAuth API](https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_InitiateAuth.html)
-* [Amazon Cognito RespondToAuthChallenge API](https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_RespondToAuthChallenge.html)
-* [Computing Cognito secret hash values](https://docs.aws.amazon.com/cognito/latest/developerguide/signing-up-users-in-your-app.html#cognito-user-pools-computing-secret-hash)
-* [JWT introduction](https://jwt.io/introduction)
+## CLI Command References
 
-### AWS CLI Command References
+### General CLI References
 
-Every AWS CLI command used in this lab is linked below to the direct AWS command reference page.
+| Command | Reference |
+| --- | --- |
+| `python3 -m venv` | [Python venv](https://docs.python.org/3/library/venv.html) |
+| `python3` | [Python command line](https://docs.python.org/3/using/cmdline.html) |
+| `pip` | [pip CLI](https://pip.pypa.io/en/stable/cli/) |
+| `curl` | [curl man page](https://curl.se/docs/manpage.html) |
+| `jq` | [jq manual](https://jqlang.github.io/jq/manual/) |
+| `zip` | [Info-ZIP manual](https://infozip.sourceforge.net/Zip.html) |
+
+
+### AWS CLI References
 
 | Command | AWS CLI reference |
 | --- | --- |
@@ -1313,22 +1437,24 @@ Every AWS CLI command used in this lab is linked below to the direct AWS command
 | `aws lambda create-function` | [lambda create-function](https://docs.aws.amazon.com/cli/latest/reference/lambda/create-function.html) |
 | `aws lambda get-function` | [lambda get-function](https://docs.aws.amazon.com/cli/latest/reference/lambda/get-function.html) |
 | `aws lambda invoke` | [lambda invoke](https://docs.aws.amazon.com/cli/latest/reference/lambda/invoke.html) |
-| `aws lambda add-permission` | [lambda add-permission](https://docs.aws.amazon.com/cli/latest/reference/lambda/add-permission.html) |
 | `aws apigatewayv2 create-api` | [apigatewayv2 create-api](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/create-api.html) |
 | `aws apigatewayv2 get-api` | [apigatewayv2 get-api](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/get-api.html) |
 | `aws apigatewayv2 create-integration` | [apigatewayv2 create-integration](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/create-integration.html) |
 | `aws apigatewayv2 create-route` | [apigatewayv2 create-route](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/create-route.html) |
 | `aws apigatewayv2 create-stage` | [apigatewayv2 create-stage](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/create-stage.html) |
+| `aws lambda add-permission` | [lambda add-permission](https://docs.aws.amazon.com/cli/latest/reference/lambda/add-permission.html) |
+| `aws cognito-idp create-user-pool` | [cognito-idp create-user-pool](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/create-user-pool.html) |
+| `aws cognito-idp set-user-pool-mfa-config` | [cognito-idp set-user-pool-mfa-config](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/set-user-pool-mfa-config.html) |
+| `aws cognito-idp list-user-pool-clients` | [cognito-idp list-user-pool-clients](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/list-user-pool-clients.html) |
+| `aws cognito-idp create-user-pool-client` | [cognito-idp create-user-pool-client](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/create-user-pool-client.html) |
+| `aws cognito-idp describe-user-pool-client` | [cognito-idp describe-user-pool-client](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/describe-user-pool-client.html) |
+| `aws cognito-idp admin-create-user` | [cognito-idp admin-create-user](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/admin-create-user.html) |
+| `aws cognito-idp admin-set-user-password` | [cognito-idp admin-set-user-password](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/admin-set-user-password.html) |
+| `aws cognito-idp admin-get-user` | [cognito-idp admin-get-user](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/admin-get-user.html) |
 | `aws apigatewayv2 create-authorizer` | [apigatewayv2 create-authorizer](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/create-authorizer.html) |
 | `aws apigatewayv2 get-routes` | [apigatewayv2 get-routes](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/get-routes.html) |
 | `aws apigatewayv2 update-route` | [apigatewayv2 update-route](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/update-route.html) |
 | `aws apigatewayv2 get-authorizer` | [apigatewayv2 get-authorizer](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/get-authorizer.html) |
-| `aws cognito-idp create-user-pool` | [cognito-idp create-user-pool](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/create-user-pool.html) |
-| `aws cognito-idp set-user-pool-mfa-config` | [cognito-idp set-user-pool-mfa-config](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/set-user-pool-mfa-config.html) |
-| `aws cognito-idp create-user-pool-client` | [cognito-idp create-user-pool-client](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/create-user-pool-client.html) |
-| `aws cognito-idp admin-create-user` | [cognito-idp admin-create-user](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/admin-create-user.html) |
-| `aws cognito-idp admin-set-user-password` | [cognito-idp admin-set-user-password](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/admin-set-user-password.html) |
-| `aws cognito-idp admin-get-user` | [cognito-idp admin-get-user](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/admin-get-user.html) |
 | `aws cognito-idp initiate-auth` | [cognito-idp initiate-auth](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/initiate-auth.html) |
 | `aws cognito-idp associate-software-token` | [cognito-idp associate-software-token](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/associate-software-token.html) |
 | `aws cognito-idp verify-software-token` | [cognito-idp verify-software-token](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/verify-software-token.html) |

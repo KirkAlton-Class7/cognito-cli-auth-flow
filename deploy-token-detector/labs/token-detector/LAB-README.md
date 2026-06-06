@@ -84,52 +84,16 @@ Start with the [full lab](lab-docs/deploy-token-detector-lab.md). Build the base
 * [REST Deployment](../../../REST/README.md)
 * [HTTPS Deployment](../../../HTTPS/README.md)
 
-## Validation Checklist
+## Concept Overview
 
-Use this checklist before you consider the token detector lab complete:
+This lab covers these core areas:
 
-- [ ] Start from a working REST or HTTPS Cognito auth flow.
-- [ ] Copy `env.example` to `.env`, update planned values, and reload it before dependent commands.
-- [ ] Create the DynamoDB token table with `token_id` as the partition key.
-- [ ] Add the DynamoDB access policy to the Lambda role used by the route and detector functions.
-- [ ] Copy starter helper code into `sandbox/scripts/` and add the `uuid` import.
-- [ ] Add a DynamoDB token record after a token is issued, with `used` set to `False`.
-- [ ] Preserve the routing logic from the original token helper script.
-- [ ] Print curl examples that include the generated `x-token-id` header.
-- [ ] Copy starter Jedi and Sith route code into `sandbox/lambda-code/`.
-- [ ] Update the Python route Lambda to read `x-token-id` and mark matching records used.
-- [ ] Update the Node.js route Lambda to read `x-token-id` and mark matching records used.
-- [ ] Preserve the original Jedi and Sith route response behavior after adding token telemetry.
-- [ ] Create or deploy `unused_token_detector.py` with the token table environment variable.
-- [ ] Run `get_token.py` and confirm a new DynamoDB item is created.
-- [ ] Call a protected Jedi or Sith route with `x-token-id` and confirm DynamoDB marks the token used.
-- [ ] Generate a token and intentionally do not use it.
-- [ ] Invoke the detector after the unused threshold and confirm `ALERT: Token unused` appears in CloudWatch Logs.
-- [ ] Create the EventBridge Scheduler rule for recurring detector scans.
-- [ ] Create the SNS topic, CloudWatch metric filter, and CloudWatch alarm for unused-token alerts.
-- [ ] Run the lab teardown from the matching lab teardown file when you are ready to remove the detector resources.
-
-## Concept Takeaways
-
-- Cognito can issue valid tokens that are never used against protected APIs; token issuance and token usage are different events.
-- DynamoDB gives each issued token a durable tracking record keyed by `token_id`.
-- The `x-token-id` header connects an API call back to the token-helper record without changing Cognito itself.
-- The Jedi and Sith route Lambdas should keep their original route behavior while adding token-use telemetry.
-- The detector Lambda turns stored token metadata into an operational signal by finding old records where `used` is still `False`.
-- CloudWatch metric filters convert detector log lines into metrics, and alarms turn those metrics into notifications.
-- EventBridge Scheduler makes detection recurring instead of manual.
-- This pattern practices security observability: proving not just who authenticated, but whether the issued credential was used.
-
-## Final Check
-
-You are ready to leave this token detector lab when you can explain the full flow without looking:
-
-```text
-Cognito issues JWT tokens
-get_token.py records issued token metadata in DynamoDB
-Protected routes receive x-token-id after API Gateway authorization succeeds
-Jedi and Sith Lambdas mark matching token records as used
-unused_token_detector.py scans for old unused token records
-CloudWatch metric filters turn detector logs into alert signals
-SNS delivers the unused-token notification path
-```
+- Token issuance versus token usage
+- DynamoDB token records
+- `x-token-id` request correlation
+- Jedi and Sith route telemetry
+- Unused-token detector logic
+- CloudWatch metric filters and alarms
+- SNS notification paths
+- EventBridge scheduled detection
+- Security observability for authenticated traffic

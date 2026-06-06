@@ -1,6 +1,6 @@
 # Cognito Auth Flow - REST Deployment
 
-REST API implementation of the Cognito auth-flow lab.<br>
+REST API implementation of the Cognito auth-flow deployment.<br>
 View the HTTPS deployment [here](../HTTPS/README.md) if you prefer that implementation.<br><br>
 
 This deployment uses API Gateway **REST API** resources and methods with a native Cognito User Pool authorizer. Use the CLI-first or Console-first deployment to build the infrastructure, then use the CLI for the Cognito challenge flow, token handling, and protected route tests.

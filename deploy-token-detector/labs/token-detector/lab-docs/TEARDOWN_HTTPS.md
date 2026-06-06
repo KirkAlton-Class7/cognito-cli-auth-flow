@@ -1,9 +1,68 @@
 # Token Detector HTTPS Lab Teardown
 
-Use this to tear down the HTTPS Cognito auth deployment plus the unused-token detector resources created by this lab. Skip any command for a resource you did not create.
+## Purpose
+
+Remove the token detector HTTPS lab resources, then verify that add-on, identity, API, logging, alerting, and IAM lookups return deleted or empty results.
+
+### Details
+
+Task details:
+
+- Load the environment values for the resources being removed
+- Look up generated IDs when `.env` does not already contain them
+- Delete application and API resources before dependent identity or IAM resources
+- Delete token table, scanner schedule, metric filter, alarm, SNS topic, and detector Lambda resources
+- Delete CloudWatch log groups and alarms after application resources are removed
+- Verify that lookups return deleted, not-found, or empty results
+
+## Prerequisites
+
+### Dependencies
+
+#### Applications
+
+| Dependency | Requirement |
+| --- | --- |
+| AWS CLI | Delete resources and verify removed state. |
+| jq | Parse lookup responses when generated IDs are missing from `.env`. |
+| curl | Confirm public endpoints no longer respond when applicable. |
+
+#### Infrastructure
+
+| Dependency | Requirement |
+| --- | --- |
+| Existing HTTPS resources | The resources named in `.env` were created by the matching runbook or lab. |
+| Environment file | `.env` contains generated IDs, ARNs, names, and endpoints needed for deletion. |
+| CloudWatch log groups | Log groups may outlive Lambda deletion and should be removed explicitly. |
+
+#### Access Requirements
+
+| Dependency | Requirement |
+| --- | --- |
+| AWS credentials | Use credentials with permission to delete API Gateway, Lambda, IAM, Cognito, CloudWatch, and related resources. |
+| Account and region confirmation | Confirm the active account and region before running destructive commands. |
+
+#### APIs And Services
+
+| Dependency | Requirement |
+| --- | --- |
+| API Gateway | Delete REST or HTTP APIs, routes, integrations, stages, authorizers, and deployments. |
+| Lambda and IAM | Delete functions, permissions, policies, and roles after dependent resources are removed. |
+| Cognito | Delete user pools and app clients when they belong to this environment. |
+| CloudWatch | Delete log groups, metric filters, and alarms created by the environment. |
+
+### Supporting Files
+
+| File | Use |
+| --- | --- |
+| [`../env.example`](../env.example) | Lab environment template showing token-detector values required by teardown. |
+| [`../LAB-README.md`](../LAB-README.md) | Token detector lab document map. |
+| [`deploy-token-detector-lab.md`](deploy-token-detector-lab.md) | Lab that creates the add-on resources removed here. |
+| [`../sandbox/sandbox-info.md`](../sandbox/sandbox-info.md) | Sandbox note for locally edited lab files. |
 
 > [!WARNING]
 > These commands delete API Gateway, Lambda, Cognito, DynamoDB, EventBridge Scheduler, CloudWatch, SNS, and IAM resources. Confirm you are using the HTTPS token-detector lab values before running teardown.
+
 
 ## 1. Create And Load The Environment File
 
@@ -185,26 +244,33 @@ aws cognito-idp list-user-pools --max-results 60 --region "$AWS_REGION" \
 
 ## References
 
-### AWS CLI Command References
+| Topic | References |
+| --- | --- |
+| DynamoDB token table cleanup | [Working with DynamoDB items](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithItems.html), [DynamoDB Time to Live](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/TTL.html) |
+| Lambda detector cleanup | [AWS Lambda](https://docs.aws.amazon.com/lambda/latest/dg/welcome.html), [Lambda execution roles](https://docs.aws.amazon.com/lambda/latest/dg/lambda-intro-execution-role.html), [Lambda environment variables](https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html) |
+| CloudWatch alarm and metric cleanup | [CloudWatch Logs metric filters](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/MonitoringLogData.html), [Filter pattern syntax](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/FilterAndPatternSyntax.html), [CloudWatch alarms](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/AlarmThatSendsEmail.html) |
+| Notification and scheduled workflow cleanup | [Amazon SNS email notifications](https://docs.aws.amazon.com/sns/latest/dg/sns-email-notifications.html), [EventBridge scheduled rules](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-create-rule-schedule.html), [EventBridge Scheduler user guide](https://docs.aws.amazon.com/scheduler/latest/UserGuide/what-is-scheduler.html) |
 
-Every AWS CLI command used in this teardown is linked below to the direct AWS command reference page.
+## CLI Command References
+
+### AWS CLI References
 
 | Command | AWS CLI reference |
 | --- | --- |
 | `aws apigatewayv2 get-apis` | [apigatewayv2 get-apis](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/get-apis.html) |
-| `aws apigatewayv2 delete-api` | [apigatewayv2 delete-api](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/delete-api.html) |
-| `aws cloudwatch delete-alarms` | [cloudwatch delete-alarms](https://docs.aws.amazon.com/cli/latest/reference/cloudwatch/delete-alarms.html) |
 | `aws cognito-idp list-user-pools` | [cognito-idp list-user-pools](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/list-user-pools.html) |
+| `aws sns list-topics` | [sns list-topics](https://docs.aws.amazon.com/cli/latest/reference/sns/list-topics.html) |
+| `aws scheduler delete-schedule` | [scheduler delete-schedule](https://docs.aws.amazon.com/cli/latest/reference/scheduler/delete-schedule.html) |
+| `aws cloudwatch delete-alarms` | [cloudwatch delete-alarms](https://docs.aws.amazon.com/cli/latest/reference/cloudwatch/delete-alarms.html) |
+| `aws logs delete-metric-filter` | [logs delete-metric-filter](https://docs.aws.amazon.com/cli/latest/reference/logs/delete-metric-filter.html) |
+| `aws sns delete-topic` | [sns delete-topic](https://docs.aws.amazon.com/cli/latest/reference/sns/delete-topic.html) |
+| `aws lambda delete-function` | [lambda delete-function](https://docs.aws.amazon.com/cli/latest/reference/lambda/delete-function.html) |
+| `aws apigatewayv2 delete-api` | [apigatewayv2 delete-api](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/delete-api.html) |
 | `aws cognito-idp delete-user-pool` | [cognito-idp delete-user-pool](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/delete-user-pool.html) |
 | `aws dynamodb delete-table` | [dynamodb delete-table](https://docs.aws.amazon.com/cli/latest/reference/dynamodb/delete-table.html) |
-| `aws dynamodb list-tables` | [dynamodb list-tables](https://docs.aws.amazon.com/cli/latest/reference/dynamodb/list-tables.html) |
+| `aws logs delete-log-group` | [logs delete-log-group](https://docs.aws.amazon.com/cli/latest/reference/logs/delete-log-group.html) |
 | `aws iam delete-role-policy` | [iam delete-role-policy](https://docs.aws.amazon.com/cli/latest/reference/iam/delete-role-policy.html) |
 | `aws iam detach-role-policy` | [iam detach-role-policy](https://docs.aws.amazon.com/cli/latest/reference/iam/detach-role-policy.html) |
 | `aws iam delete-role` | [iam delete-role](https://docs.aws.amazon.com/cli/latest/reference/iam/delete-role.html) |
-| `aws lambda delete-function` | [lambda delete-function](https://docs.aws.amazon.com/cli/latest/reference/lambda/delete-function.html) |
 | `aws lambda list-functions` | [lambda list-functions](https://docs.aws.amazon.com/cli/latest/reference/lambda/list-functions.html) |
-| `aws logs delete-metric-filter` | [logs delete-metric-filter](https://docs.aws.amazon.com/cli/latest/reference/logs/delete-metric-filter.html) |
-| `aws logs delete-log-group` | [logs delete-log-group](https://docs.aws.amazon.com/cli/latest/reference/logs/delete-log-group.html) |
-| `aws scheduler delete-schedule` | [scheduler delete-schedule](https://docs.aws.amazon.com/cli/latest/reference/scheduler/delete-schedule.html) |
-| `aws sns list-topics` | [sns list-topics](https://docs.aws.amazon.com/cli/latest/reference/sns/list-topics.html) |
-| `aws sns delete-topic` | [sns delete-topic](https://docs.aws.amazon.com/cli/latest/reference/sns/delete-topic.html) |
+| `aws dynamodb list-tables` | [dynamodb list-tables](https://docs.aws.amazon.com/cli/latest/reference/dynamodb/list-tables.html) |

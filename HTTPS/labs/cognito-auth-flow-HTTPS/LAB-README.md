@@ -4,6 +4,26 @@ Hands-on lab for building and validating the HTTPS/HTTP API implementation of th
 
 This lab isolates the authentication mechanics so you can see how Cognito behaves before putting the pattern inside a larger application. You will build an HTTP API protected by a Cognito JWT authorizer, create a Chewbacca test user, enroll software-token MFA, use token helper scripts, and validate protected Jedi/Sith Lambda routes.
 
+## Authentication and Authorization Flow
+
+```text
+User initiates authentication with Amazon Cognito
+        ↓
+Cognito validates credentials and required MFA challenges
+        ↓
+Cognito issues JWT tokens
+        ↓
+Client sends an API request with an access token
+        ↓
+API Gateway validates the JWT signature, claims, and required scope
+        ↓
+Authorized requests are routed to the appropriate Lambda function
+        ↓
+Unauthorized requests are rejected by API Gateway
+        ↓
+CloudWatch logs and metrics provide visibility into request processing
+```
+
 ## Choose A Lab Path
 
 | Document | Use |
@@ -83,7 +103,7 @@ Token helper script pass:
 | [../../docs/RUNBOOK-CONSOLE.md](../../docs/RUNBOOK-CONSOLE.md) | Lean Console reference for the same HTTPS flow. |
 | [../../../shared/lambda-code/](../../../shared/lambda-code/) | Shared Jedi and Sith Lambda source. |
 | [../../../shared/scripts/](../../../shared/scripts/) | Secret hash and token helper scripts. |
-| [/assets/images/](/assets/images/) | Screenshots used throughout the lab docs. |
+| [/assets/images/](../../../assets/images/) | Screenshots used throughout the lab docs. |
 
 ## Recommended Order
 
@@ -94,55 +114,17 @@ After the base HTTPS auth flow works, continue with the token detector add-on:
 * [Token Detector](../../../deploy-token-detector/README.md)
 * [Token Detector Lab](../../../deploy-token-detector/labs/token-detector/LAB-README.md)
 
-## Validation Checklist
+## Concept Overview
 
-Use this checklist before you consider the HTTPS lab complete:
+This lab covers these core areas:
 
-- [ ] Copy `env.example` to `.env`, update planned values, and reload it before dependent commands.
-- [ ] Package both shared Lambda handlers from `shared/lambda-code/`.
-- [ ] Create or configure separate Lambda roles for the Python and Node functions.
-- [ ] Create the Jedi Python Lambda and Sith Node Lambda.
-- [ ] Invoke both Lambda functions directly and confirm HTTP `200` responses.
-- [ ] Create the HTTP API, Lambda integrations, `/jedi` route, `/sith` route, and `prod` stage.
-- [ ] Test both public routes before adding Cognito and confirm they return HTTP `200`.
-- [ ] Create the Cognito user pool, app clients, Chewbacca user, and MFA configuration.
-- [ ] Create the managed login page app client without a client secret for browser login and token helper scripts.
-- [ ] Optionally create the secret-bearing app client when you want to validate `SECRET_HASH` flows.
-- [ ] Generate a valid `SECRET_HASH` when using the secret-bearing app client.
-- [ ] Run the manual `USER_AUTH` flow and observe the `SELECT_CHALLENGE` response.
-- [ ] Copy each Cognito `Session` value into the next matching challenge response.
-- [ ] Complete the `PASSWORD` challenge and the `SOFTWARE_TOKEN_MFA` challenge with a valid TOTP code.
-- [ ] Export the access token, ID token, and refresh token after MFA succeeds.
-- [ ] Create the HTTP API JWT authorizer with the Cognito issuer and public app client audience.
-- [ ] Attach the JWT authorizer to both protected routes.
-- [ ] Confirm both protected routes return HTTP `401` without an `Authorization` header.
-- [ ] Confirm both protected routes return HTTP `200` with a valid access token.
-- [ ] Run `easier_get_token.py` and `flavor_get_token.py` after the manual pass.
-- [ ] Confirm CloudWatch logs appear only after API Gateway authorization succeeds.
-- [ ] Run the lab teardown from `lab-docs/TEARDOWN_HTTPS.md` when you are ready to remove the lab resources.
-
-## Concept Takeaways
-
-- Cognito owns user authentication, challenge negotiation, MFA validation, and JWT issuance.
-- `SECRET_HASH` proves knowledge of an app client secret; it does not replace the user password or MFA factor.
-- `USER_AUTH` makes the challenge sequence visible: `SELECT_CHALLENGE`, `PASSWORD`, then `SOFTWARE_TOKEN_MFA`.
-- Cognito `Session` values are chain-specific. Reusing a session from another flow, user, or challenge can break authentication.
-- HTTP API routes are protected by a JWT authorizer that checks issuer, audience, token validity, and route authorization settings.
-- HTTP API uses the access token for protected API route calls in this lab.
-- HTTP API stages can auto-deploy route and authorizer changes, unlike REST API stage redeployments.
-- API Gateway rejects unauthorized requests before Lambda runs, so missing Lambda logs can be proof that authorization blocked the request.
-- CloudWatch is the final evidence source for whether API Gateway reached Lambda.
-
-## Final Check
-
-You are ready to leave this HTTPS lab when you can explain the full flow without looking:
-
-```text
-Chewbacca authenticates with Cognito
-Cognito negotiates PASSWORD and SOFTWARE_TOKEN_MFA challenges
-Cognito issues JWT tokens
-API Gateway HTTP API validates the access token with a JWT authorizer
-Authorized requests reach the Jedi and Sith Lambda routes
-Unauthorized requests stop at API Gateway
-CloudWatch proves which requests reached Lambda
-```
+- Amazon Cognito user authentication
+- Software-token MFA with authenticator apps
+- Cognito app clients with and without client secrets
+- `SECRET_HASH` validation
+- Cognito challenge flow sequencing
+- Access tokens, ID tokens, and refresh tokens
+- HTTP API JWT authorizers
+- JWT audience and issuer validation
+- Lambda integration routing
+- CloudWatch log validation

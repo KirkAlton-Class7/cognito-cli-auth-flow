@@ -1,6 +1,6 @@
 # Cognito Token Detector
 
-Token-use tracking extension for the Cognito auth-flow lab.<br>
+Token-use tracking extension for the Cognito auth-flow deployments.<br>
 Use the hands-on lab [here](labs/token-detector/LAB-README.md) if you want to practice making the code changes step by step.<br><br>
 
 This folder contains ready-to-use code for recording issued tokens, marking tokens used when either protected route is called, and scanning for stale unused tokens.
