@@ -2,18 +2,16 @@
 
 The HTTPS version uses API Gateway HTTP API with a built-in JWT authorizer. Cognito owns the user authentication flow. API Gateway validates the token before Lambda runs.
 
-```text
-Chewbacca CLI
-  -> Cognito initiate-auth USER_AUTH
-  -> SELECT_CHALLENGE
-  -> PASSWORD
-  -> SOFTWARE_TOKEN_MFA
-  -> Access token
-  -> API Gateway HTTP API JWT authorizer
-  -> /prod/jedi or /prod/sith
-  -> Lambda
-  -> CloudWatch Logs
-```
+- Chewbacca CLI
+- Cognito initiate-auth USER_AUTH
+- SELECT_CHALLENGE
+- PASSWORD
+- SOFTWARE_TOKEN_MFA
+- Access token
+- API Gateway HTTP API JWT authorizer
+- /prod/jedi or /prod/sith
+- Lambda
+- CloudWatch Logs
 
 ## Route Map
 

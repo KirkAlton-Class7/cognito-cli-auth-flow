@@ -4,14 +4,12 @@ This runbook deploys token-use tracking and unused-token detection for the Cogni
 
 ## What This Deploys
 
-```text
-Cognito token helper
-  -> DynamoDB token record
-  -> API Gateway /prod/jedi or /prod/sith
-  -> route Lambda marks token used
-  -> detector Lambda scans for stale unused tokens
-  -> CloudWatch logs and optional SNS alarm
-```
+- Cognito token helper
+- DynamoDB token record
+- API Gateway /prod/jedi or /prod/sith
+- route Lambda marks token used
+- detector Lambda scans for stale unused tokens
+- CloudWatch logs and optional SNS alarm
 
 ## Deployment Assets
 
@@ -22,47 +20,57 @@ Cognito token helper
 | `lambda-code/sith_node_token_tracker.js` | Sith Node route Lambda with token-used tracking. |
 | `lambda-code/unused_token_detector.py` | Detector Lambda that logs unused token alerts. |
 
-## 1. Export Deployment Values
+## 1. Create And Load The Environment File
 
-Use the same `PROJECT_NAME` as the API flow you already deployed.
+An environment file helps simplify deployment and provides a record of planned values and resource outputs. You will copy the dotenv template, rename the copy to `.env`, update initial values, then reload it before running commands that depend on those values.
+
+Copy the template:
 
 ```bash
 export REPO_ROOT="/Users/kirk/devsecops/cognito-cli-auth-flow"
 cd "$REPO_ROOT"
 
-export AWS_REGION="us-east-1"
-export PROJECT_NAME="chewbacca-auth-rest"
-
-export JEDI_FUNCTION="${PROJECT_NAME}-jedi-python"
-export SITH_FUNCTION="${PROJECT_NAME}-sith-node"
-export LAMBDA_ROLE_NAME="${PROJECT_NAME}-lambda-basic-role"
-
-export TOKEN_TABLE_NAME="${PROJECT_NAME}-jedi-token-holocron"
-export TOKEN_DETECTOR_FUNCTION="${PROJECT_NAME}-unused-token-detector"
-export TOKEN_SCAN_SCHEDULE="${PROJECT_NAME}-unused-token-check"
-export TOKEN_ALERT_TOPIC="${PROJECT_NAME}-auth-alerts"
-
-export TOKEN_ALERT_FILTER_NAME="${PROJECT_NAME}-unused-token-filter"
-export TOKEN_ALERT_METRIC_NAMESPACE="${PROJECT_NAME}/auth-security"
-export TOKEN_ALERT_METRIC_NAME="UnusedTokenAlertCount"
-export TOKEN_ALERT_ALARM_NAME="${PROJECT_NAME}-unused-token-alarm"
-
-# API_BASE includes /prod, matching scripts/get_token.py.
-export API_BASE="https://<API_ID>.execute-api.${AWS_REGION}.amazonaws.com/prod"
+cp "$REPO_ROOT/deploy-token-detector/env.example" \
+  "$REPO_ROOT/deploy-token-detector/.env"
 ```
 
-Export AWS identifiers:
+Set the environment file path:
 
 ```bash
-export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-
-export LAMBDA_ROLE_ARN=$(aws iam get-role \
-  --role-name "$LAMBDA_ROLE_NAME" \
-  --query 'Role.Arn' \
-  --output text)
+export ENV_FILE="$REPO_ROOT/deploy-token-detector/.env"
 ```
 
-Validation:
+Get the AWS account ID:
+
+```bash
+aws sts get-caller-identity --query Account --output text
+```
+
+Open `.env` in VS Code or your editor of choice:
+
+```bash
+code "$ENV_FILE"
+```
+
+In `.env`, update the foundational inputs and API base value before building:
+
+```bash
+REPO_ROOT="/Users/kirk/devsecops/cognito-cli-auth-flow"
+AWS_ACCOUNT_ID="123456789012"
+AWS_REGION="us-east-1"
+PROJECT_NAME="chewbacca-auth-rest"
+API_BASE="https://<API_ID>.execute-api.${AWS_REGION}.amazonaws.com/prod"
+```
+
+Save `.env`, then load it for the deployment phase:
+
+```bash
+set -a
+source "$ENV_FILE"
+set +a
+```
+
+Validate the starting values:
 
 ```bash
 echo "$AWS_REGION"
@@ -270,13 +278,13 @@ aws lambda add-permission \
 
 Create the schedule in the console:
 
-```text
-Amazon EventBridge -> Scheduler -> Create schedule
-Schedule name: value from TOKEN_SCAN_SCHEDULE
-Schedule pattern: rate(5 minutes)
-Target: Lambda
-Function: value from TOKEN_DETECTOR_FUNCTION
-```
+- Amazon EventBridge
+- Scheduler
+- Create schedule
+- Schedule name: value from TOKEN_SCAN_SCHEDULE
+- Schedule pattern: rate(5 minutes)
+- Target: Lambda
+- Function: value from TOKEN_DETECTOR_FUNCTION
 
 ## 7. Configure CloudWatch And SNS Alerts
 

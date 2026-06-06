@@ -1,6 +1,6 @@
 # Unused Token Detector Lab
 
-This lab extends the Cognito auth flow by adding token-use telemetry and an unused-token detector. The goal is to practice editing code and seeing why each change exists. You can edit directly in AWS, but the recommended flow is to copy starter code into the sandbox, edit locally, then add the edited code in AWS and deploy. The quick-deployment files are provided after the manual path so you can deploy quickly once the edits make sense.
+This lab extends the Cognito auth flow by adding token-use telemetry and an unused-token detector. The goal is to practice editing code and seeing why each change exists. You can edit directly in AWS, but the recommended flow is to copy starter code into the sandbox, edit locally, then add the edited code in AWS and deploy. The quick-deployment files are provided as finished references after the manual path. Use the runbook when you want the concise quick deployment flow.
 
 Ready code path lives in `../../../docs/deploy-token-detector-runbook.md`.
 
@@ -21,55 +21,62 @@ Ready code path lives in `../../../docs/deploy-token-detector-runbook.md`.
 | `sandbox/` | Empty student workspace. Copy starter files here, edit locally, then add the edited code in AWS. |
 | `sandbox/scripts/` | Local copies of helper scripts copied from `shared/scripts/`. |
 | `sandbox/lambda-code/` | Local copies of Lambda code copied from `shared/lambda-code/`, plus the new detector Lambda you create in this lab. |
-| `quick-deployment/get_token.py` | Finished token helper for quick deployment. |
-| `quick-deployment/jedi_python_token_tracker.py` | Finished Jedi Python route Lambda. |
-| `quick-deployment/sith_node_token_tracker.js` | Finished Sith Node route Lambda. |
-| `quick-deployment/unused_token_detector.py` | Finished detector Lambda. |
+| `quick-deployment/get_token.py` | Finished token helper reference. |
+| `quick-deployment/jedi_python_token_tracker.py` | Finished Jedi Python route Lambda reference. |
+| `quick-deployment/sith_node_token_tracker.js` | Finished Sith Node route Lambda reference. |
+| `quick-deployment/unused_token_detector.py` | Finished detector Lambda reference. |
 
 > [!IMPORTANT]
 > Do not pre-fill `sandbox/` with the quick-deployment files. The sandbox is where students copy starter files from `shared/`, make the lab edits, then add the edited code in AWS.
 
-## 1. Export Lab Values
+## 1. Create And Load The Environment File
 
-Use the same `PROJECT_NAME` as the API lab you already built.
+An environment file helps simplify deployment and provides a record of planned values and resource outputs. You will copy the dotenv template, rename the copy to `.env`, update initial values, then reload it before running commands that depend on those values.
 
-```bash
-export LAB_REPO="/Users/kirk/devsecops/cognito-cli-auth-flow"
-cd "$LAB_REPO"
-
-export AWS_REGION="us-east-1"
-export PROJECT_NAME="chewbacca-auth-rest"
-
-export JEDI_FUNCTION="${PROJECT_NAME}-jedi-python"
-export SITH_FUNCTION="${PROJECT_NAME}-sith-node"
-export LAMBDA_ROLE_NAME="${PROJECT_NAME}-lambda-basic-role"
-
-export TOKEN_TABLE_NAME="${PROJECT_NAME}-jedi-token-holocron"
-export TOKEN_DETECTOR_FUNCTION="${PROJECT_NAME}-unused-token-detector"
-export TOKEN_SCAN_SCHEDULE="${PROJECT_NAME}-unused-token-check"
-export TOKEN_ALERT_TOPIC="${PROJECT_NAME}-auth-alerts"
-
-export TOKEN_ALERT_FILTER_NAME="${PROJECT_NAME}-unused-token-filter"
-export TOKEN_ALERT_METRIC_NAMESPACE="${PROJECT_NAME}/auth-security"
-export TOKEN_ALERT_METRIC_NAME="UnusedTokenAlertCount"
-export TOKEN_ALERT_ALARM_NAME="${PROJECT_NAME}-unused-token-alarm"
-
-# API_BASE includes /prod.
-export API_BASE="https://<API_ID>.execute-api.${AWS_REGION}.amazonaws.com/prod"
-```
-
-Export AWS identifiers:
+Copy the template:
 
 ```bash
-export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-
-export LAMBDA_ROLE_ARN=$(aws iam get-role \
-  --role-name "$LAMBDA_ROLE_NAME" \
-  --query 'Role.Arn' \
-  --output text)
+cp "$LAB_REPO/deploy-token-detector/labs/token-detector/env.example" \
+  "$LAB_REPO/deploy-token-detector/labs/token-detector/.env"
 ```
 
-Validation:
+Set the environment file path:
+
+```bash
+export LAB_ENV="$LAB_REPO/deploy-token-detector/labs/token-detector/.env"
+```
+
+Get the AWS account ID:
+
+```bash
+aws sts get-caller-identity --query Account --output text
+```
+
+Open `.env` in VS Code or your editor of choice:
+
+```bash
+code "$LAB_ENV"
+```
+
+In `.env`, update the foundational inputs and API base value before building:
+
+```bash
+LAB_REPO="/Users/kirk/devsecops/cognito-cli-auth-flow"
+AWS_ACCOUNT_ID="123456789012"
+AWS_REGION="us-east-1"
+PROJECT_NAME="chewbacca-auth-rest"
+API_BASE="https://<API_ID>.execute-api.${AWS_REGION}.amazonaws.com/prod"
+```
+
+Save `.env`, then load it for the build phase:
+
+```bash
+set -a
+source "$LAB_ENV"
+set +a
+```
+
+Validate the starting values:
 
 ```bash
 echo "$PROJECT_NAME"
@@ -257,7 +264,7 @@ Also update the printed curl examples so they include the token ID header:
 -H "x-token-id: {token_id}"
 ```
 
-The finished quick-deployment version is here:
+The finished reference version is here:
 
 ```bash
 deploy-token-detector/labs/token-detector/quick-deployment/get_token.py
@@ -297,7 +304,7 @@ cp shared/lambda-code/sith_node.js deploy-token-detector/labs/token-detector/san
 
 After editing, add the updated code to your existing AWS route Lambdas rather than creating brand-new route functions.
 
-| Route | Existing Lambda name pattern | Finished quick-deployment code |
+| Route | Existing Lambda name pattern | Finished reference code |
 | --- | --- | --- |
 | `/prod/jedi` | `${PROJECT_NAME}-jedi-python` | `deploy-token-detector/labs/token-detector/quick-deployment/jedi_python_token_tracker.py` |
 | `/prod/sith` | `${PROJECT_NAME}-sith-node` | `deploy-token-detector/labs/token-detector/quick-deployment/sith_node_token_tracker.js` |
@@ -525,27 +532,7 @@ Create a new Lambda for detection:
 | Environment variable | `TOKEN_TABLE_NAME=<TOKEN_TABLE_NAME>` |
 | Optional environment variable | `TOKEN_UNUSED_MINUTES=10` |
 
-Use the quick-deployment code when you want the finished detector:
-
-```bash
-deploy-token-detector/labs/token-detector/quick-deployment/unused_token_detector.py
-```
-
-Package and deploy quick reference:
-
-```bash
-cd "$LAB_REPO/deploy-token-detector/labs/token-detector/quick-deployment"
-zip unused-token-detector.zip unused_token_detector.py
-
-aws lambda create-function \
-  --function-name "$TOKEN_DETECTOR_FUNCTION" \
-  --runtime python3.12 \
-  --role "$LAMBDA_ROLE_ARN" \
-  --handler unused_token_detector.lambda_handler \
-  --zip-file fileb://unused-token-detector.zip \
-  --environment "Variables={TOKEN_TABLE_NAME=${TOKEN_TABLE_NAME},TOKEN_UNUSED_MINUTES=10}" \
-  --region "$AWS_REGION"
-```
+The finished detector code is available in `quick-deployment/unused_token_detector.py` for comparison after you complete the manual edit path. Use the ready runbook at `../../../docs/deploy-token-detector-runbook.md` when you want the concise quick deployment flow.
 
 Test the detector:
 
@@ -628,25 +615,66 @@ Token is marked used in DynamoDB
 Detector does not alert for that token
 ```
 
+## Validation Checklist
+
+Use this checklist before you consider the token detector lab complete:
+
+- [ ] Start from a working REST or HTTPS Cognito auth flow.
+- [ ] Copy `env.example` to `.env`, update planned values, and reload it before dependent commands.
+- [ ] Create the DynamoDB token table with `token_id` as the partition key.
+- [ ] Add the DynamoDB access policy to the Lambda role used by the route and detector functions.
+- [ ] Copy starter helper code into `sandbox/scripts/` and add the `uuid` import.
+- [ ] Add a DynamoDB token record after a token is issued, with `used` set to `False`.
+- [ ] Preserve the routing logic from the original token helper script.
+- [ ] Print curl examples that include the generated `x-token-id` header.
+- [ ] Copy starter Jedi and Sith route code into `sandbox/lambda-code/`.
+- [ ] Update the Python route Lambda to read `x-token-id` and mark matching records used.
+- [ ] Update the Node.js route Lambda to read `x-token-id` and mark matching records used.
+- [ ] Preserve the original Jedi and Sith route response behavior after adding token telemetry.
+- [ ] Create or deploy `unused_token_detector.py` with the token table environment variable.
+- [ ] Run `get_token.py` and confirm a new DynamoDB item is created.
+- [ ] Call a protected Jedi or Sith route with `x-token-id` and confirm DynamoDB marks the token used.
+- [ ] Generate a token and intentionally do not use it.
+- [ ] Invoke the detector after the unused threshold and confirm `ALERT: Token unused` appears in CloudWatch Logs.
+- [ ] Create the EventBridge Scheduler rule for recurring detector scans.
+- [ ] Create the SNS topic, CloudWatch metric filter, and CloudWatch alarm for unused-token alerts.
+- [ ] Run the lab teardown from the matching lab teardown file when you are ready to remove the detector resources.
+
+## Concept Takeaways
+
+- Cognito can issue valid tokens that are never used against protected APIs; token issuance and token usage are different events.
+- DynamoDB gives each issued token a durable tracking record keyed by `token_id`.
+- The `x-token-id` header connects an API call back to the token-helper record without changing Cognito itself.
+- The Jedi and Sith route Lambdas should keep their original route behavior while adding token-use telemetry.
+- The detector Lambda turns stored token metadata into an operational signal by finding old records where `used` is still `False`.
+- CloudWatch metric filters convert detector log lines into metrics, and alarms turn those metrics into notifications.
+- EventBridge Scheduler makes detection recurring instead of manual.
+- This pattern practices security observability: proving not just who authenticated, but whether the issued credential was used.
+
 ## Final Check
 
-You have completed this lab when you can explain this flow without looking:
+You are ready to leave this token detector lab when you can explain the full path without looking:
 
-`get_token.py` imports `uuid` and creates a unique `token_id`  
-The token helper writes a DynamoDB record with `used` set to `False`  
-The helper prints Jedi and Sith curl commands that include `x-token-id`  
-The Jedi Python Lambda preserves its original route logic and marks tokens used  
-The Sith Node Lambda preserves its original route logic and marks tokens used  
-`unused_token_detector.py` scans for old records where `used` is still `False`  
-CloudWatch logs show `ALERT: Token unused` when a stale token is found  
-The metric filter matches that alert line and feeds the CloudWatch alarm  
-SNS can notify you when the alarm enters the alert state
+```text
+Cognito issues JWT tokens
+get_token.py records issued token metadata in DynamoDB
+Protected routes receive x-token-id after API Gateway authorization succeeds
+Jedi and Sith Lambdas mark matching token records as used
+unused_token_detector.py scans for old unused token records
+CloudWatch metric filters turn detector logs into alert signals
+SNS delivers the unused-token notification path
+```
 
 ## References
 
 [Boto3 Documentation - put_item](https://docs.aws.amazon.com/boto3/latest/reference/services/dynamodb/table/put_item.html)  
 [Working With Items and Attributes in DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithItems.html)  
 [Filter Pattern Syntax for Metric Filters, Subscription Filters, Filter Log Events, and Live Tail](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/FilterAndPatternSyntax.html#regex-expressions)
+
+[Amazon DynamoDB data model](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.CoreComponents.html)  
+[EventBridge Scheduler user guide](https://docs.aws.amazon.com/scheduler/latest/UserGuide/what-is-scheduler.html)  
+[Amazon SNS topics](https://docs.aws.amazon.com/sns/latest/dg/sns-create-topic.html)  
+[CloudWatch metric filters](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/MonitoringLogData.html)
 
 ### AWS CLI Command References
 

@@ -1,9 +1,9 @@
-# REST Teardown
+# REST Lab Teardown
 
-Use this to tear down the base REST Cognito auth infrastructure. It does not remove token-detector resources.
+Use this to tear down the base REST Cognito auth infrastructure. It removes the resources created by the base auth-flow lab. It does not remove token-detector resources.
 
 > [!WARNING]
-> These commands delete the REST API, Lambda functions, Cognito user pool, CloudWatch log groups, and IAM roles. Confirm you are using the REST values before running teardown.
+> These commands delete the REST API, Lambda functions, Cognito user pool, CloudWatch log groups, and IAM roles. Confirm you are using the REST lab values before running teardown.
 
 ## 1. Create And Load The Environment File
 
@@ -13,12 +13,12 @@ Copy the template if `.env` does not already exist:
 
 ```bash
 export REPO_ROOT="/Users/kirk/devsecops/cognito-cli-auth-flow"
-export ENV_FILE="$REPO_ROOT/REST/.env"
+export ENV_FILE="$REPO_ROOT/REST/labs/cognito-auth-flow-REST/.env"
 
-cp "$REPO_ROOT/REST/env.example" "$ENV_FILE"
+cp "$REPO_ROOT/REST/labs/cognito-auth-flow-REST/env.example" "$ENV_FILE"
 ```
 
-Open `.env` and confirm these values match the REST resources you want to remove:
+Open `.env` and confirm these values match the REST lab resources you want to remove:
 
 ```bash
 code "$ENV_FILE"
@@ -75,7 +75,7 @@ echo "$PYTHON_LAMBDA_ROLE_NAME"
 echo "$NODE_LAMBDA_ROLE_NAME"
 ```
 
-## 3. Delete Base REST Resources
+## 3. Delete Base REST Lab Resources
 
 Delete the REST API. This removes its resources, methods, integrations, deployments, stages, and Cognito authorizer:
 

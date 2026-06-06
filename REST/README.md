@@ -3,7 +3,7 @@
 REST API implementation of the Cognito auth-flow lab.<br>
 View the HTTPS version [here](../HTTPS/README.md) if you prefer that implementation.<br><br>
 
-This version uses API Gateway **REST API** resources and methods with a native Cognito User Pool authorizer. Use the CLI-first or Console-first path to build the infrastructure, then use the CLI for the Cognito challenge flow, token handling, and protected route tests.
+This path uses API Gateway **REST API** resources and methods with a native Cognito User Pool authorizer. Use the CLI-first or Console-first path to build the infrastructure, then use the CLI for the Cognito challenge flow, token handling, and protected route tests.
 
 The runbook intentionally progresses through several CLI passes:
 
@@ -32,15 +32,13 @@ The runbook intentionally progresses through several CLI passes:
 
 ## Architecture Summary
 
-```text
-Chewbacca CLI
-  -> Cognito USER_AUTH
-  -> SELECT_CHALLENGE
-  -> SOFTWARE_TOKEN_MFA
-  -> access token with aws.cognito.signin.user.admin scope
-  -> REST API Cognito User Pool authorizer
-  -> Jedi/Sith Lambda
-```
+- Chewbacca CLI
+- Cognito USER_AUTH
+- SELECT_CHALLENGE
+- SOFTWARE_TOKEN_MFA
+- access token with aws.cognito.signin.user.admin scope
+- REST API Cognito User Pool authorizer
+- Jedi/Sith Lambda
 
 ## Get Started
 

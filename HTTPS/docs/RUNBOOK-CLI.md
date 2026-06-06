@@ -1,104 +1,20 @@
 # Cognito Auth Flow - HTTPS Runbook - CLI
 
-HTTP API implementation of the Cognito auth-flow runbook.<br>
-View the REST version [here](../../REST/README.md) if you prefer that implementation.<br><br>
+Use this runbook to build the HTTPS/HTTP API Cognito auth flow from the CLI. It includes the required console step for Cognito managed login, plus the commands needed to export IDs, validate each resource, authenticate with MFA, and test the protected API routes.
 
-Use this runbook to build and validate the HTTPS/HTTP API Cognito auth flow primarily with AWS CLI commands. Some AWS Console checkpoints are included where they make Cognito managed login and visual validation easier. It keeps the architecture intentionally small: one user pool, one secret-bearing app client for `SECRET_HASH`, one optional public helper app client, two Lambda functions, one HTTP API, and a Cognito JWT authorizer.
+This flow uses:
 
-> [!IMPORTANT]
-> This folder documents the HTTP API implementation. The REST implementation uses the same Cognito flow but a different API Gateway command set and authorizer type.
-
-## Build Mode
-
-Use the **AWS CLI** when possible to create infrastructure. Use the AWS Console for visual checkpoints and managed-login configuration when the runbook calls it out:
-
-```text
-IAM role
-Lambda functions
-HTTP API
-Lambda integrations
-Cognito user pool
-Cognito app client
-Chewbacca test user
-HTTP API JWT authorizer
-```
-
-Use the **CLI** after the infrastructure build to test authentication. Run it as a progression:
-
-```text
-Public route check:
-  call /jedi and /sith before attaching the authorizer
-  confirm both routes return 200 and Lambda logs appear
-
-Authorizer enforcement check:
-  attach the JWT authorizer
-  call /jedi without a token
-  confirm API Gateway returns 401 and Lambda does not run
-
-Manual pass:
-  generate SECRET_HASH
-  run USER_AUTH
-  inspect the raw SELECT_CHALLENGE response
-  copy the Session value by hand
-  choose PASSWORD
-  copy the new Session value by hand
-  complete SOFTWARE_TOKEN_MFA
-  inspect the returned tokens
-
-Export pass:
-  export generated IDs and names
-  export Session values
-  export JWT tokens
-  call protected routes with newly generated tokens
-
-Token helper script pass:
-  create or use a public app client with no secret
-  set up a local Python venv
-  run easier_get_token.py for direct token retrieval
-  run flavor_get_token.py for decoded claims and curl examples
-```
-
-> [!NOTE]
-> Console steps in this runbook are supporting checkpoints. Keep the CLI exports and validation commands as the source of truth for repeatable rebuilds.
+- Chewbacca test user
+- Cognito User Pool
+- public app client for Cognito managed login and token helper scripts
+- Cognito access token
+- API Gateway HTTP API JWT authorizer
+- protected /prod/jedi and /prod/sith Lambda routes
 
 > [!IMPORTANT]
-> Do the manual CLI pass first. Copy challenge `Session` values by hand so the Cognito sequence is visible: `SELECT_CHALLENGE` -> `PASSWORD` -> `SOFTWARE_TOKEN_MFA`. After that, use the export path for repeatable testing.
+> HTTP API routes are protected with a Cognito JWT authorizer. Use a newly generated Cognito **access token** for protected route tests. The HTTP API JWT authorizer validates the token issuer and audience before Lambda runs.
 
-## What You Build
-
-```text
-CLI user
-  -> Cognito User Pool
-  -> USER_AUTH / SELECT_CHALLENGE
-  -> PASSWORD
-  -> SOFTWARE_TOKEN_MFA
-  -> JWT tokens
-  -> API Gateway HTTP API
-  -> Cognito JWT Authorizer
-  -> Lambda
-  -> CloudWatch Logs
-```
-
-This runbook keeps the application small so each authentication step stays visible.
-
-The API routes are intentionally simple:
-
-| Route | Runtime | Theme role |
-| --- | --- | --- |
-| `/prod/jedi` | Python | Jedi Council response path |
-| `/prod/sith` | Node.js | Sith response path |
-
-## Source Material
-
-| Source | Purpose |
-| --- | --- |
-| [`../../shared/lambda-code`](../../shared/lambda-code/) | Simplified Chewbacca/Jedi/Sith Lambda functions for this runbook |
-| [`../../shared/scripts/secret_hash.py`](../../shared/scripts/secret_hash.py) | Helper script for Cognito app clients with a client secret |
-| [`../../shared/scripts/easier_get_token.py`](../../shared/scripts/easier_get_token.py) | Direct token helper for a public no-secret app client |
-| [`../../shared/scripts/flavor_get_token.py`](../../shared/scripts/flavor_get_token.py) | Token helper that decodes claims and prints Jedi/Sith curl examples |
-| [`../../shared/scripts/requirements.txt`](../../shared/scripts/requirements.txt) | Python dependency list for the helper-script venv |
-
-## Prerequisites For CLI Testing
+## Prerequisites
 
 Install or confirm these tools:
 
@@ -109,13 +25,13 @@ python3 --version
 zip --version
 ```
 
-Confirm your AWS identity:
+Confirm AWS identity:
 
 ```bash
 aws sts get-caller-identity
 ```
 
-Set the working directory:
+Set the repo root:
 
 ```bash
 export REPO_ROOT="<COGNITO_CLI_AUTH_FLOW_REPO_ROOT>"
@@ -125,58 +41,87 @@ cd "$REPO_ROOT"
 Example:
 
 ```bash
-export REPO_ROOT="/Users/kirk/cognito-cli-auth-flow"
+export REPO_ROOT="/Users/kirk/devsecops/cognito-cli-auth-flow"
 cd "$REPO_ROOT"
 ```
 
-## 1. Record And Export Runbook Values
+## 1. Create And Load The Environment File
 
-Create the infrastructure in the AWS Console using these names, then export the same values in your terminal before running the authentication flow.
+An environment file helps simplify deployment and provides a record of planned values and resource outputs. You will copy the dotenv template, rename the copy to `.env`, update initial values, then reload it before running commands that depend on those values.
 
-```bash
-export AWS_REGION="us-east-1"
-export PROJECT_NAME="chewbacca-auth-http"
-
-export JEDI_FUNCTION="${PROJECT_NAME}-jedi-python"
-export SITH_FUNCTION="${PROJECT_NAME}-sith-node"
-export LAMBDA_ROLE_NAME="${PROJECT_NAME}-lambda-basic-role"
-
-export API_NAME="${PROJECT_NAME}-api"
-export USER_POOL_NAME="${PROJECT_NAME}-users"
-export DEFAULT_APP_CLIENT_NAME="${PROJECT_NAME}-users"
-export USER_POOL_CLIENT_NAME="${PROJECT_NAME}-cli-client"
-export AUTHORIZER_NAME="${PROJECT_NAME}-cognito-jwt"
-
-export TEST_USERNAME="chewbacca"
-export TEST_EMAIL="chewbacca@example.com"
-export TEST_PASSWORD="Wookiee#2026!"
-```
-
-Get your AWS account ID:
+Copy the template:
 
 ```bash
-export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+cp "$REPO_ROOT/HTTPS/env.example" \
+  "$REPO_ROOT/HTTPS/.env"
 ```
 
-Validation:
+Set the environment file path:
 
 ```bash
-echo "$AWS_REGION"
-echo "$AWS_ACCOUNT_ID"
-echo "$PROJECT_NAME"
+export ENV_FILE="$REPO_ROOT/HTTPS/.env"
 ```
 
-## 2. Create the Lambda Execution Role
+Get the AWS account ID:
 
-Lambda needs permission to write logs to CloudWatch.
+```bash
+aws sts get-caller-identity --query Account --output text
+```
 
-Console path: **IAM** -> **Roles** -> **Create role** -> trusted entity **Lambda** -> attach `AWSLambdaBasicExecutionRole` -> role name from `LAMBDA_ROLE_NAME`.
+Open `.env` in VS Code or your editor of choice:
 
-Equivalent CLI reference:
+```bash
+code "$ENV_FILE"
+```
+
+In `.env`, update the foundational inputs and review the planned values before building:
+
+```bash
+REPO_ROOT="/Users/kirk/devsecops/cognito-cli-auth-flow"
+AWS_ACCOUNT_ID="123456789012"
+AWS_REGION="us-east-1"
+PROJECT_NAME="chewbacca-auth-http"
+TEST_USERNAME="chewbacca"
+TEST_EMAIL="chewbacca@example.com"
+TEST_PASSWORD="Wookiee#2026!"
+TEMP_PASSWORD="Wookiee#TEMP1!"
+```
+
+Save `.env`, then load it for the build phase:
+
+```bash
+set -a
+source "$ENV_FILE"
+set +a
+```
+
+Validate the starting values before building:
+
+```bash
+echo "AWS_REGION=$AWS_REGION"
+echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID"
+echo "PROJECT_NAME=$PROJECT_NAME"
+echo "JEDI_FUNCTION=$JEDI_FUNCTION"
+echo "SITH_FUNCTION=$SITH_FUNCTION"
+echo "API_NAME=$API_NAME"
+echo "USER_POOL_NAME=$USER_POOL_NAME"
+echo "AUTHORIZER_NAME=$AUTHORIZER_NAME"
+```
+
+> [!NOTE]
+> Keep stable infrastructure values in `.env`. Keep short-lived values like `SESSION`, `TOTP_CODE`, `SECRET_HASH`, `ACCESS_TOKEN`, `ID_TOKEN`, `REFRESH_TOKEN`, and full auth responses in the terminal only.
+
+## 2. Create Lambda Execution Roles
+
+This build uses separate Lambda execution roles for the Python Jedi function and the Node Sith function.
+
+### Commands
+
+Create the Python role:
 
 ```bash
 aws iam create-role \
-  --role-name "$LAMBDA_ROLE_NAME" \
+  --role-name "$PYTHON_LAMBDA_ROLE_NAME" \
   --assume-role-policy-document '{
     "Version": "2012-10-17",
     "Statement": [
@@ -189,23 +134,50 @@ aws iam create-role \
       }
     ]
   }'
-```
 
-Attach the basic execution policy:
-
-```bash
 aws iam attach-role-policy \
-  --role-name "$LAMBDA_ROLE_NAME" \
+  --role-name "$PYTHON_LAMBDA_ROLE_NAME" \
   --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 ```
 
-Export the role ARN:
+Create the Node role:
 
 ```bash
-export LAMBDA_ROLE_ARN=$(aws iam get-role \
-  --role-name "$LAMBDA_ROLE_NAME" \
+aws iam create-role \
+  --role-name "$NODE_LAMBDA_ROLE_NAME" \
+  --assume-role-policy-document '{
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Principal": {
+          "Service": "lambda.amazonaws.com"
+        },
+        "Action": "sts:AssumeRole"
+      }
+    ]
+  }'
+
+aws iam attach-role-policy \
+  --role-name "$NODE_LAMBDA_ROLE_NAME" \
+  --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+```
+
+Export role ARNs:
+
+```bash
+export PYTHON_LAMBDA_ROLE_ARN=$(aws iam get-role \
+  --role-name "$PYTHON_LAMBDA_ROLE_NAME" \
   --query 'Role.Arn' \
   --output text)
+
+export NODE_LAMBDA_ROLE_ARN=$(aws iam get-role \
+  --role-name "$NODE_LAMBDA_ROLE_NAME" \
+  --query 'Role.Arn' \
+  --output text)
+
+echo "$PYTHON_LAMBDA_ROLE_ARN"
+echo "$NODE_LAMBDA_ROLE_ARN"
 ```
 
 Give IAM a few seconds to propagate:
@@ -214,71 +186,58 @@ Give IAM a few seconds to propagate:
 sleep 10
 ```
 
-Validation:
+## 3. Package Lambda Code
 
-```bash
-echo "$LAMBDA_ROLE_ARN"
-```
-
-## 3. Package the Lambda Functions
-
-Package the provided Jedi and Sith functions.
+Package the shared Lambda handlers with the default filenames expected by the Lambda console handlers.
 
 ```bash
 cd "$REPO_ROOT/shared/lambda-code"
 
-zip jedi-python.zip jedi_python.py
-zip sith-node.zip sith_node.js
+cp jedi_python.py lambda_function.py
+zip jedi-python.zip lambda_function.py
+
+cp sith_node.js index.js
+zip sith-node.zip index.js
 ```
 
 Validation:
 
 ```bash
-ls -lh *.zip
+ls -lh jedi-python.zip sith-node.zip
 ```
 
-## 4. Create the Lambda Functions
+Packaging confirmation:
 
-Create the Jedi Python Lambda:
+# TODO: Updated Screenshot
+![Package Lambda ZIP files](/assets/images/095-package-lambda-zips.png)
 
-Console path: **Lambda** -> **Create function** -> **Author from scratch**. Use the function names, runtimes, handlers, and ZIP files shown below.
+## 4. Create The Lambda Functions
 
-> [!IMPORTANT]
-> Keep these values handy for API Gateway integration:
+Create both Lambda functions from the packaged ZIP files, then export the function ARNs for API Gateway integration.
 
-| Parameter | Console Location | Value |
-| --- | --- | --- |
-| Jedi function name | Lambda function overview | `chewbacca-auth-http-jedi-python` |
-| Jedi function ARN | Lambda function overview -> **Function ARN** | `<JEDI_FUNCTION_ARN>` |
-| Sith function name | Lambda function overview | `chewbacca-auth-http-sith-node` |
-| Sith function ARN | Lambda function overview -> **Function ARN** | `<SITH_FUNCTION_ARN>` |
-| Lambda execution role | Lambda function configuration -> **Permissions** | `chewbacca-auth-http-lambda-basic-role` |
+### Commands
 
-Equivalent CLI reference:
+Create the functions:
 
 ```bash
 aws lambda create-function \
   --function-name "$JEDI_FUNCTION" \
   --runtime python3.12 \
-  --role "$LAMBDA_ROLE_ARN" \
-  --handler jedi_python.lambda_handler \
+  --role "$PYTHON_LAMBDA_ROLE_ARN" \
+  --handler lambda_function.lambda_handler \
   --zip-file fileb://jedi-python.zip \
   --region "$AWS_REGION"
-```
 
-Create the Sith Node.js Lambda:
-
-```bash
 aws lambda create-function \
   --function-name "$SITH_FUNCTION" \
   --runtime nodejs20.x \
-  --role "$LAMBDA_ROLE_ARN" \
-  --handler sith_node.handler \
+  --role "$NODE_LAMBDA_ROLE_ARN" \
+  --handler index.handler \
   --zip-file fileb://sith-node.zip \
   --region "$AWS_REGION"
 ```
 
-Export function ARNs:
+Export the function ARNs:
 
 ```bash
 export JEDI_FUNCTION_ARN=$(aws lambda get-function \
@@ -292,64 +251,67 @@ export SITH_FUNCTION_ARN=$(aws lambda get-function \
   --query 'Configuration.FunctionArn' \
   --output text \
   --region "$AWS_REGION")
-```
 
-Validation:
-
-```bash
 echo "$JEDI_FUNCTION_ARN"
 echo "$SITH_FUNCTION_ARN"
 ```
 
+Function ARN export validation:
+
+# TODO: Updated Screenshot
+![Export function ARNs and validate](/assets/images/110-validate-function-arns.png)
+
 ## 5. Test Lambda Directly
 
-Invoke the Jedi Python function:
+Invoke the Python Lambda:
 
 ```bash
 aws lambda invoke \
   --function-name "$JEDI_FUNCTION" \
   --payload '{"queryStringParameters":{"name":"Chewbacca"}}' \
   --cli-binary-format raw-in-base64-out \
-  /tmp/chewbacca-jedi-response.json \
+  /tmp/chewbacca-rest-jedi-response.json \
   --region "$AWS_REGION"
 
-jq . /tmp/chewbacca-jedi-response.json
+jq . /tmp/chewbacca-rest-jedi-response.json
 ```
 
-Expected output:
+Expected:
 
 ```text
-statusCode: 200
-body contains: The Python Jedi Council accepts your request.
+Jedi route returns 200 and a Python Jedi Council message.
 ```
 
-Invoke the Sith Node.js function:
+Jedi Python invoke success:
+
+# TODO: Updated Screenshot
+![Jedi Python invoke success](/assets/images/027-jedi-python-invoke-success.png)
+
+Invoke the Node Lambda:
 
 ```bash
 aws lambda invoke \
   --function-name "$SITH_FUNCTION" \
   --payload '{"queryStringParameters":{"name":"Chewbacca"}}' \
   --cli-binary-format raw-in-base64-out \
-  /tmp/chewbacca-sith-response.json \
+  /tmp/chewbacca-rest-sith-response.json \
   --region "$AWS_REGION"
 
-jq . /tmp/chewbacca-sith-response.json
+jq . /tmp/chewbacca-rest-sith-response.json
 ```
 
-Expected output:
+Expected:
 
 ```text
-statusCode: 200
-body contains: THE NODE SITH ROUTE HAS FELT YOUR PRESENCE.
+Sith route returns 200 and a Node Sith message.
 ```
 
-Validation:
+Sith Node invoke success:
 
-- Jedi Python returns a JSON body with `The Python Jedi Council accepts your request.`
-- Sith Node returns a JSON body with `THE NODE SITH ROUTE HAS FELT YOUR PRESENCE.`
-- CloudWatch has log groups for both functions.
+# TODO: Updated Screenshot
+![Sith Node invoke success](/assets/images/023-sith-node-invoke-success.png)
 
-## 6. Create the HTTP API
+## 6. Create The HTTP API
 
 Console path: **API Gateway** -> **Create API** -> **HTTP API** -> API name from `API_NAME`.
 
@@ -391,7 +353,7 @@ echo "$API_ID"
 echo "$API_ENDPOINT"
 ```
 
-## 7. Add Lambda Integrations
+## 7. Add HTTP API Routes And Lambda Proxy Integrations
 
 In the console, add Lambda integrations for `jedi` and `sith`, then create the `GET /jedi` and `GET /sith` routes. Keep the `prod` stage auto-deployed.
 
@@ -467,23 +429,28 @@ aws lambda add-permission \
   --region "$AWS_REGION"
 ```
 
-## 8. Test the Public API Before Authorizer
+## 8. Test Unprotected HTTP API Paths Without A Token
 
 Before adding the authorizer, prove routing works. These requests should return `200` and create Lambda logs.
 
 This checkpoint proves the HTTP API route, Lambda integration, Lambda permission, and function code work before authorization is added.
 
 ```bash
-curl "${API_ENDPOINT}/prod/jedi?name=Chewbacca"
-curl "${API_ENDPOINT}/prod/sith?name=Chewbacca"
+curl -i "${API_ENDPOINT}/prod/jedi?name=Chewbacca"
+curl -i "${API_ENDPOINT}/prod/sith?name=Chewbacca"
 ```
 
-Expected output:
+Expected:
 
 ```text
 {"message":"Welcome Chewbacca. The Python Jedi Council accepts your request.",...}
 {"message":"WELCOME CHEWBACCA. THE NODE SITH ROUTE HAS FELT YOUR PRESENCE.",...}
 ```
+
+Both unprotected route tests:
+
+# TODO: Updated Screenshot
+![Unprotected API path tests](/assets/images/015-unprotected-api-tests.png)
 
 Validation:
 
@@ -491,25 +458,9 @@ Validation:
 - CloudWatch logs show API Gateway event payloads.
 - The event shape is different from the direct Lambda test payload.
 
-## 9. Create the Cognito User Pool
+## 9. Create The Cognito User Pool
 
-Create the user pool first with MFA off. Cognito requires SMS configuration when MFA is set to optional during `create-user-pool`, so software-token MFA is enabled after the pool exists.
-
-Console path: **Amazon Cognito** -> **User pools** -> **Create user pool**. Use email sign-in and the password policy shown below. Leave MFA off during initial pool creation, then enable software-token MFA after the pool exists.
-
-> [!IMPORTANT]
-> Keep these values handy for app client setup, authorizer setup, and CLI authentication:
-
-| Parameter | Console Location | Value |
-| --- | --- | --- |
-| User pool name | Cognito user pool details | `chewbacca-auth-http-users` |
-| User pool ID | Cognito user pool details | `<USER_POOL_ID>` |
-| Issuer URL | `https://cognito-idp.<REGION>.amazonaws.com/<USER_POOL_ID>` | `<COGNITO_ISSUER>` |
-| Region | AWS console region selector | `us-east-1` |
-
-### 9.1 Create The User Pool
-
-Equivalent CLI reference:
+### Commands
 
 ```bash
 export USER_POOL_ID=$(aws cognito-idp create-user-pool \
@@ -517,6 +468,10 @@ export USER_POOL_ID=$(aws cognito-idp create-user-pool \
   --mfa-configuration OFF \
   --alias-attributes email \
   --auto-verified-attributes email \
+  --schema \
+    Name=name,AttributeDataType=String,Required=true,Mutable=true \
+    Name=birthdate,AttributeDataType=String,Required=true,Mutable=true \
+    Name=phone_number,AttributeDataType=String,Required=true,Mutable=true \
   --policies '{
     "PasswordPolicy": {
       "MinimumLength": 12,
@@ -531,64 +486,44 @@ export USER_POOL_ID=$(aws cognito-idp create-user-pool \
   --region "$AWS_REGION")
 ```
 
-### 9.2 Enable Software Token MFA
+```bash
+export COGNITO_ISSUER="https://cognito-idp.${AWS_REGION}.amazonaws.com/${USER_POOL_ID}"
+export USER_POOL_ARN="arn:aws:cognito-idp:${AWS_REGION}:${AWS_ACCOUNT_ID}:userpool/${USER_POOL_ID}"
+
+echo "$USER_POOL_ID"
+echo "$COGNITO_ISSUER"
+echo "$USER_POOL_ARN"
+```
+
+## 10. Enable Software Token MFA
+
+### Commands
 
 ```bash
 aws cognito-idp set-user-pool-mfa-config \
   --user-pool-id "$USER_POOL_ID" \
-  --mfa-configuration OPTIONAL \
+  --mfa-configuration ON \
   --software-token-mfa-configuration Enabled=true \
   --region "$AWS_REGION"
 ```
 
-Export the issuer URL:
+> [!NOTE]
+> If you want a softer enrollment path while testing, use `OPTIONAL` instead of `ON`. The managed login flow in this runbook intentionally walks the user through authenticator setup.
 
-```bash
-export COGNITO_ISSUER="https://cognito-idp.${AWS_REGION}.amazonaws.com/${USER_POOL_ID}"
-```
+## 11. Configure App Clients
 
-Validation:
-
-```bash
-echo "$USER_POOL_ID"
-echo "$COGNITO_ISSUER"
-```
-
-## 10. Configure App Clients
-
-This runbook uses two app clients:
+This runbook uses one required no-secret app client and supports one optional secret-bearing app client:
 
 | Client | Secret | Purpose |
 | --- | --- | --- |
-| Default `${PROJECT_NAME}-users` client | No secret | Managed login and token helper scripts |
-| Additional `${PROJECT_NAME}-cli-client` client | Secret | Manual CLI flow with `SECRET_HASH` |
+| Default `chewbacca-auth-http-users` client | No secret | Managed login and token helper scripts |
+| Optional `chewbacca-auth-http-cli-client` client | Secret | `SECRET_HASH` validation flow |
 
-### 10.1 Create Or Confirm The Default No-Secret App Client
+### 11.1 Edit The Default No-Secret App Client
 
-Use this app client for Cognito managed login and token helper scripts. Browser-based login and local helper scripts should not depend on a client secret.
+#### Commands
 
-Console path: open the user pool -> **App clients** -> create or select the default no-secret app client. Enable `ALLOW_USER_PASSWORD_AUTH` and `ALLOW_REFRESH_TOKEN_AUTH`, and set token expiration values for the runbook.
-
-Equivalent CLI reference:
-
-```bash
-export DEFAULT_CLIENT_JSON=$(aws cognito-idp create-user-pool-client \
-  --user-pool-id "$USER_POOL_ID" \
-  --client-name "$DEFAULT_APP_CLIENT_NAME" \
-  --explicit-auth-flows ALLOW_USER_PASSWORD_AUTH ALLOW_REFRESH_TOKEN_AUTH \
-  --access-token-validity 15 \
-  --id-token-validity 15 \
-  --refresh-token-validity 1 \
-  --token-validity-units AccessToken=minutes,IdToken=minutes,RefreshToken=days \
-  --query 'UserPoolClient' \
-  --output json \
-  --region "$AWS_REGION")
-
-export DEFAULT_CLIENT_ID=$(echo "$DEFAULT_CLIENT_JSON" | jq -r '.ClientId')
-export COGNITO_PUBLIC_CLIENT_ID="$DEFAULT_CLIENT_ID"
-```
-
-If the default client already exists, look it up instead:
+Look up the default app client from the CLI:
 
 ```bash
 export DEFAULT_CLIENT_ID=$(aws cognito-idp list-user-pool-clients \
@@ -600,38 +535,26 @@ export DEFAULT_CLIENT_ID=$(aws cognito-idp list-user-pool-clients \
 export COGNITO_PUBLIC_CLIENT_ID="$DEFAULT_CLIENT_ID"
 ```
 
-### 10.2 Create The Secret-Bearing CLI App Client
-
-Create an additional app client with a client secret so you can work directly with `SECRET_HASH` and understand how Cognito generates and validates it.
-
-Console path: open the user pool -> **App clients** -> **Create app client**. Enable the auth flows shown below, generate a client secret, and set token expiration for the runbook:
-
-| Token | Expiration |
-| --- | --- |
-| Access token | `15 minutes` |
-| ID token | `15 minutes` |
-| Refresh token | `1 day` |
+### 11.2 Create The Additional Secret-Bearing CLI App Client
 
 > [!IMPORTANT]
-> Keep these values handy for `SECRET_HASH`, manual authentication, and the export-driven run:
+> This step is optional: Only create a secret-bearing app client if you need to validate `SECRET_HASH` flows.
 
-| Parameter | Console Location | Value |
-| --- | --- | --- |
-| App client name | Cognito app client details | `${PROJECT_NAME}-cli-client` |
-| Client ID | Cognito app client details | `<CLIENT_ID>` |
-| Client secret | Cognito app client details -> **Show client secret** | `<CLIENT_SECRET>` |
-| Enabled auth flows | App client authentication flows | `ALLOW_USER_AUTH`, `ALLOW_USER_PASSWORD_AUTH`, `ALLOW_REFRESH_TOKEN_AUTH` |
+Create this app client only when you need to validate `SECRET_HASH` flows.
 
-Equivalent CLI reference:
+#### Commands
+
+Create the secret-bearing app client:
 
 ```bash
 export CLIENT_JSON=$(aws cognito-idp create-user-pool-client \
   --user-pool-id "$USER_POOL_ID" \
   --client-name "$USER_POOL_CLIENT_NAME" \
   --generate-secret \
-  --explicit-auth-flows ALLOW_USER_AUTH ALLOW_USER_PASSWORD_AUTH ALLOW_REFRESH_TOKEN_AUTH \
-  --access-token-validity 15 \
-  --id-token-validity 15 \
+  --explicit-auth-flows ALLOW_USER_AUTH ALLOW_USER_PASSWORD_AUTH ALLOW_USER_SRP_AUTH ALLOW_REFRESH_TOKEN_AUTH \
+  --auth-session-validity 15 \
+  --access-token-validity 60 \
+  --id-token-validity 60 \
   --refresh-token-validity 1 \
   --token-validity-units AccessToken=minutes,IdToken=minutes,RefreshToken=days \
   --query 'UserPoolClient' \
@@ -642,81 +565,81 @@ export CLIENT_ID=$(echo "$CLIENT_JSON" | jq -r '.ClientId')
 export CLIENT_SECRET=$(echo "$CLIENT_JSON" | jq -r '.ClientSecret')
 ```
 
-Validation:
+Describe and validate the app client:
 
 ```bash
-echo "$DEFAULT_CLIENT_ID"
+export CLIENT_JSON=$(aws cognito-idp describe-user-pool-client \
+  --user-pool-id "$USER_POOL_ID" \
+  --client-id "$CLIENT_ID" \
+  --query 'UserPoolClient' \
+  --output json \
+  --region "$AWS_REGION")
+
 echo "$CLIENT_ID"
 echo "${CLIENT_SECRET:0:8}..."
-echo "$CLIENT_JSON" | jq '{ClientName,ExplicitAuthFlows,AccessTokenValidity,IdTokenValidity,RefreshTokenValidity,TokenValidityUnits}'
+echo "$CLIENT_JSON" | jq '{ClientName,ExplicitAuthFlows,AuthSessionValidity,AccessTokenValidity,IdTokenValidity,RefreshTokenValidity,TokenValidityUnits}'
 ```
 
-> [!IMPORTANT]
-> Do not commit real Cognito client secrets. This runbook prints only a short prefix for validation.
+### 11.3 Create Managed Login Styling
 
-### 10.3 Create Managed Login Styling
+The CLI path still creates a Cognito managed login page so the app client has a complete hosted login experience.
 
-Managed login gives you a user-facing way to complete sign-in and TOTP enrollment. The later CLI authentication flow is still the primary learning path, but the hosted login page is useful for comparing user-facing Cognito behavior with command-line challenge handling.
+#### Required Console Step
 
 1. In the user pool, click **Branding**.
 2. Click **Managed login**.
 3. Click **Create style** in the styles tile.
 
 > [!NOTE]
-> Cognito managed login may show a browser error if a login page style has not been created and assigned. Create the style before using **View login page**.
+> Create the style before using **View login page**. Cognito can show a browser error when the login page has no assigned style.
 
-If you try to view the login page before creating a style, you may see this browser error:
+# TODO: Updated Screenshot
+![Select create style](/assets/images/106-select-create-login-style.png)
 
-![Login page error before style setup](/assets/temp/044-10-login-page-error.png)
+4. Select `chewbacca-auth-http-cli-client`.
 
-![Select create style](/assets/temp/116-10-select-create-style.png)
-
-4. Select `${PROJECT_NAME}-cli-client`.
-
-![Select CLI app client for login style](/assets/temp/067-10-login-style-select-cli-app-client.png)
+# TODO: Updated Screenshot
+![Select CLI app client for login style](/assets/images/062-select-login-style-app-client.png)
 
 5. Click **Create**.
 
-![Login style creation success](/assets/temp/017-10-login-style-cli-app-creation-success.png)
+# TODO: Updated Screenshot
+![Login style creation success](/assets/images/016-login-style-created.png)
 
 6. Click the **Assigned app client** to return to the app client page.
 7. Click **View login page**.
 
-![Select view login page](/assets/temp/094-10-cli-app-client-select-view-login-page.png)
+# TODO: Updated Screenshot
+![Select view login page](/assets/images/086-select-view-login-page.png)
 
 8. Confirm the CLI app client login page opens.
 
-![CLI app client login page](/assets/temp/095-10-cli-app-client-login-page.png)
+# TODO: Updated Screenshot
+![CLI app client login page](/assets/images/087-app-client-login-page.png)
 
-## 11. Create the Test User
+## 12. Create The Test User
 
-Create `chewbacca` and suppress the welcome email. You still create the managed login page so the hosted Cognito experience is present and can be compared with the CLI flow:
+Create the user with the CLI, set a permanent password, then continue through the MFA and token flow.
 
-Console path: open the user pool -> **Users** -> **Create user**. Use the username, email, and password values from the export block.
+### 12.1 Admin Create The User
 
-> [!IMPORTANT]
-> Keep these values handy for the manual authentication run:
-
-| Parameter | Console Location | Value |
-| --- | --- | --- |
-| Username | Cognito user details | `chewbacca` |
-| Email | Cognito user attributes | `chewbacca@example.com` |
-| Permanent password | Password set during user creation/reset | `Wookiee#2026!` |
-| Email verified | Cognito user attributes | `true` |
-
-Equivalent CLI reference:
+#### Commands
 
 ```bash
 aws cognito-idp admin-create-user \
   --user-pool-id "$USER_POOL_ID" \
   --username "$TEST_USERNAME" \
-  --temporary-password "$TEST_PASSWORD" \
-  --user-attributes Name=email,Value="$TEST_EMAIL" Name=email_verified,Value=true \
+  --temporary-password "$TEMP_PASSWORD" \
+  --user-attributes \
+    Name=email,Value="$TEST_EMAIL" \
+    Name=email_verified,Value=true \
+    Name=name,Value="Chewbacca Raaawr" \
+    Name=phone_number,Value="+15555550100" \
   --message-action SUPPRESS \
   --region "$AWS_REGION"
 ```
 
-Set the password as permanent:
+Set a permanent password from the CLI if you are not using managed login to complete the temporary-password challenge:
 
 ```bash
 aws cognito-idp admin-set-user-password \
@@ -737,7 +660,7 @@ aws cognito-idp admin-get-user \
   --query '{Username:Username,Status:UserStatus,Enabled:Enabled}'
 ```
 
-## 12. Add the Cognito JWT Authorizer
+## 13. Add The HTTP API JWT Authorizer
 
 Create the HTTP API JWT authorizer:
 
@@ -802,6 +725,11 @@ aws apigatewayv2 update-route \
   --region "$AWS_REGION"
 ```
 
+Validate the authorizer screenshot:
+
+# TODO: Updated Screenshot
+![Validate authorizer](/assets/images/006-validate-authorizer.png)
+
 Validation:
 
 ```bash
@@ -811,7 +739,7 @@ aws apigatewayv2 get-authorizer \
   --region "$AWS_REGION"
 ```
 
-## 13. Test JWT Enforcement Without A Token
+## 14. Test Authorizer Enforcement Without A Token
 
 Test the protected routes before generating a valid token. These requests intentionally omit the `Authorization` header. API Gateway should reject them at the JWT authorizer layer before Lambda runs.
 
@@ -823,7 +751,7 @@ curl -i "${API_ENDPOINT}/prod/jedi?name=Chewbacca"
 curl -i "${API_ENDPOINT}/prod/sith?name=Chewbacca"
 ```
 
-Expected output:
+Expected:
 
 ```text
 HTTP/2 401
@@ -833,119 +761,279 @@ content-type: application/json
 {"message":"Unauthorized"}
 ```
 
+Unauthorized response confirmation:
+
+# TODO: Updated Screenshot
+![Authorizer enforcement without token](/assets/images/109-authorizer-no-token-test.png)
+
 Validation:
 
 - Missing token returns `401` on both protected routes.
 - Lambda logs do not appear for the denied request.
 - If the request still returns `200`, the authorizer is not attached to the route or the latest API configuration is not active.
 
-## 14. Manual Authentication Run
+## 15. Token Helper Script Authentication With The No-Secret Client
 
-Run the full authentication flow manually first. Do not use shell variables in this pass. The point is to see the values Cognito returns and move them into the next request yourself.
+Use the default no-secret app client named `chewbacca-auth-http-users`.
 
-Use these placeholders in the manual commands:
+Export token helper script values:
 
-| Placeholder | Where to get it |
-| --- | --- |
-| `<REGION>` | The runbook region, such as `us-east-1` |
-| `<CLIENT_ID>` | Cognito app client ID from Step 10 |
-| `<CLIENT_SECRET>` | Cognito app client secret from Step 10 |
-| `<USER_NAME>` | Test username from Step 11, such as `chewbacca` |
-| `<USER_PASSWORD>` | Permanent password from Step 11 |
-| `<SECRET_HASH>` | Output from the manual `secret_hash.py` command |
-| `<TEMP_ACCESS_TOKEN>` | `AuthenticationResult.AccessToken` from the direct password auth response |
-| `<TOTP_SECRET>` | `SecretCode` from `associate-software-token` |
-| `<MFA_CODE>` | Current six-digit code from your authenticator app |
-| `<SELECT_CHALLENGE_SESSION>` | `Session` from the `SELECT_CHALLENGE` response |
-| `<SOFTWARE_TOKEN_MFA_SESSION>` | `Session` from the `SOFTWARE_TOKEN_MFA` challenge response |
-| `<ACCESS_TOKEN>` | `AuthenticationResult.AccessToken` from the final MFA response |
+```bash
+export COGNITO_USERNAME="$TEST_USERNAME"
+export COGNITO_PASSWORD="$TEST_PASSWORD"
+export API_BASE="${API_ENDPOINT}/prod"
 
-> [!IMPORTANT]
-> Complete this manual run before using the export-driven run. Copying the two different `Session` values by hand is what makes the Cognito challenge sequence visible.
+echo "$COGNITO_PUBLIC_CLIENT_ID"
+echo "$COGNITO_USERNAME"
+echo "$API_BASE"
+```
 
-### 14.1 Manual Check: Generate `SECRET_HASH`
+If you did not already export the no-secret client ID:
 
-`SECRET_HASH` is the client-secret proof that Cognito expects when an app client has a secret. The helper calculates the HMAC value from the username, app client ID, and client secret so the manual CLI requests match Cognito's documented `SECRET_HASH` requirement.
+```bash
+export COGNITO_PUBLIC_CLIENT_ID=$(aws cognito-idp list-user-pool-clients \
+  --user-pool-id "$USER_POOL_ID" \
+  --query "UserPoolClients[?ClientName=='${DEFAULT_APP_CLIENT_NAME}'].ClientId | [0]" \
+  --output text \
+  --region "$AWS_REGION")
+```
+
+Public app client lookup for token helper scripts:
+
+# TODO: Updated Screenshot
+![Create public helper client](/assets/images/042-create-public-helper-client.png)
+
+Install dependencies for token helper scripts:
 
 ```bash
 cd "$REPO_ROOT"
-python3 shared/scripts/secret_hash.py \
-  "<USER_NAME>" \
-  "<CLIENT_ID>" \
-  "<CLIENT_SECRET>"
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
 
-Expected output:
+Token helper script dependency install:
+
+# TODO: Updated Screenshot
+![Install helper script dependencies](/assets/images/064-install-helper-dependencies.png)
+
+Run the `easier_get_token.py` script:
+
+```bash
+python shared/scripts/easier_get_token.py
+```
+
+`easier_get_token.py` run output:
+
+# TODO: Updated Screenshot
+![Export helper script values and run easier_get_token](/assets/images/093-run-easier-get-token.png)
+
+`easier_get_token.py` token response:
+
+# TODO: Updated Screenshot
+![Easier token helper output](/assets/images/103-easier-token-helper-output.png)
+
+`easier_get_token.py` token output:
+
+# TODO: Updated Screenshot
+![Easier token helper token output](/assets/images/008-easier-token-output.png)
+
+Run the `flavor_get_token.py` script:
+
+```bash
+python shared/scripts/flavor_get_token.py
+```
+
+`flavor_get_token.py` script output:
+
+# TODO: Updated Screenshot
+![Run flavor_get_token](/assets/images/033-run-flavor-get-token.png)
+
+The `flavor_get_token.py` script should decode token claims and print curl examples for:
 
 ```text
-<SECRET_HASH>
+${API_BASE}/jedi
+${API_BASE}/sith
 ```
 
-> [!IMPORTANT]
-> Copy that output and use it as `<SECRET_HASH>` in the next manual commands.
+Curl examples from `flavor_get_token.py`:
 
-### 14.2 Initial TOTP MFA Setup
+# TODO: Updated Screenshot
+![Helper-generated curl examples](/assets/images/003-helper-curl-examples.png)
 
-Authenticate once with direct username-password auth to begin initial TOTP MFA setup. MFA is optional at this point, so Cognito should return temporary tokens.
+Access token claims:
+
+# TODO: Updated Screenshot
+![Access token claims](/assets/images/050-access-token-claims.png)
+
+Token helper script API test with access token:
+
+# TODO: Updated Screenshot
+![Helper API test with access token](/assets/images/012-helper-access-token-api-test.png)
 
 > [!NOTE]
-> Run this initial setup step only for a new test user that has not enrolled an authenticator app yet. If MFA is already enrolled, skip to **14.4 Manual Check: Start `USER_AUTH`**.
+> If the selected app client has a secret, the token helper script flow will fail because these scripts do not send `SECRET_HASH`.
 
-This `initiate-auth` call starts a username-password sign-in with the password sent in the request. This setup pass gets a short-lived access token for software-token MFA enrollment. Challenge negotiation starts in **14.4 Manual Check: Start `USER_AUTH`**.
+## 16. Test Protected HTTP API Routes With Access Tokens
+
+Copy the access token from `easier_get_token.py` or `flavor_get_token.py`, then export it for route testing:
+
+```bash
+export ACCESS_TOKEN="<ACCESS_TOKEN_FROM_TOKEN_HELPER_SCRIPT>"
+```
+
+Test the Jedi route:
+
+```bash
+curl -i \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "${API_ENDPOINT}/prod/jedi?name=Chewbacca"
+```
+
+Expected:
+
+```text
+HTTP/2 200
+...
+```
+
+> [!NOTE]
+> If the response says `The incoming token has expired`, do not chase the Lambda first. API Gateway rejected the request before invocation. Run the token helper script again and retry with a newly generated access token.
+
+Test the Sith route:
+
+This confirms the authorizer is attached to both protected routes.
+
+```bash
+curl -i \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "${API_ENDPOINT}/prod/sith?name=Chewbacca"
+```
+
+Expected:
+
+```text
+HTTP/2 200
+...
+```
+
+Protected route tests:
+
+# TODO: Updated Screenshot
+![Protected Jedi and Sith routes with access token](/assets/images/049-protected-routes-access-token.png)
+
+Protected Jedi route returns HTTP 200:
+
+# TODO: Updated Screenshot
+![Protected Jedi route returns HTTP 200](/assets/images/009-protected-jedi-200-response.png)
+
+Validation:
+
+- Public pre-authorizer test returns `200`.
+- Missing token after authorizer attachment returns `401`.
+- Valid token returns `200`.
+- Lambda logs appear only when authorization succeeds.
+
+## 17. Optional SECRET_HASH Validation
+
+Use this section only when you need to validate the optional secret-bearing app client and `SECRET_HASH` flow.
+
+Export aliases used by the auth commands:
+
+```bash
+export USERNAME="$TEST_USERNAME"
+export USER_PASSWORD="$TEST_PASSWORD"
+```
+
+Generate `SECRET_HASH`:
+
+```bash
+cd "$REPO_ROOT"
+
+export SECRET_HASH=$(python3 shared/scripts/secret_hash.py \
+  "$USERNAME" \
+  "$CLIENT_ID" \
+  "$CLIENT_SECRET")
+
+echo "${SECRET_HASH:0:20}"
+```
+
+Secret hash generation:
+
+# TODO: Updated Screenshot
+![Generate secret hash manually](/assets/images/045-generate-secret-hash.png)
+
+Secret hash export confirmation:
+
+# TODO: Updated Screenshot
+![Export secret hash](/assets/images/079-export-secret-hash.png)
+
+### 17.1 Enroll TOTP With A Temporary Access Token
+
+Use `USER_PASSWORD_AUTH` to obtain an access token for MFA setup. This access token is only used for enrollment.
 
 ```bash
 aws cognito-idp initiate-auth \
-  --client-id "<CLIENT_ID>" \
+  --client-id "$CLIENT_ID" \
   --auth-flow USER_PASSWORD_AUTH \
-  --auth-parameters USERNAME="<USER_NAME>",PASSWORD="<USER_PASSWORD>",SECRET_HASH="<SECRET_HASH>" \
-  --region "<REGION>" | jq
+  --auth-parameters USERNAME="$USERNAME",PASSWORD="$USER_PASSWORD",SECRET_HASH="$SECRET_HASH" \
+  --region "$AWS_REGION" | jq
 ```
 
-Expected output:
+Initial TOTP setup attempt:
 
-```json
-{
-  "ChallengeParameters": {},
-  "AuthenticationResult": {
-    "AccessToken": "eyJraWQiOiJNek1LXC8yZzgz...<ACCESS_TOKEN_PAYLOAD>...<ACCESS_TOKEN_SIGNATURE>",
-    "ExpiresIn": 900,
-    "TokenType": "Bearer",
-    "RefreshToken": "eyJjdHkiOiJKV1QiLCJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAifQ...<REFRESH_TOKEN>",
-    "IdToken": "eyJraWQiOiJnVkkrSDRcL0Ja...eyJ0b2tlbl91c2UiOiJpZCIsImVtYWlsIjoiY2hld2JhY2NhQGV4YW1wbGUuY29tIn0...<ID_TOKEN_SIGNATURE>"
-  }
-}
+# TODO: Updated Screenshot
+![Initial TOTP MFA setup attempt](/assets/images/055-initial-totp-mfa-attempt.png)
+
+Export the temporary access token:
+
+```bash
+export TEMP_ACCESS_TOKEN=$(aws cognito-idp initiate-auth \
+  --client-id "$CLIENT_ID" \
+  --auth-flow USER_PASSWORD_AUTH \
+  --auth-parameters USERNAME="$USERNAME",PASSWORD="$USER_PASSWORD",SECRET_HASH="$SECRET_HASH" \
+  --region "$AWS_REGION" \
+  --query 'AuthenticationResult.AccessToken' \
+  --output text)
 ```
 
-> [!NOTE]
-> `ExpiresIn` follows the app client token validity. If the app client is still at the default one-hour validity, this value can appear as `3600` instead of `900`.
-
-Use the temporary access token to request a software-token secret. `associate-software-token` begins TOTP setup and asks Cognito to generate the private key that your authenticator app will use. Cognito allows this call with either a signed-in user's access token or a valid challenge session. This runbook uses the access token for a clearer setup path.
+Associate a software token:
 
 ```bash
 aws cognito-idp associate-software-token \
-  --access-token "<TEMP_ACCESS_TOKEN>" \
-  --region "<REGION>" | jq
+  --access-token "$TEMP_ACCESS_TOKEN" \
+  --region "$AWS_REGION" | jq
 ```
 
-Expected output:
+Expected:
 
 ```json
 {
-  "SecretCode": "<TOTP_SECRET>"
+  "SecretCode": "ABCDEFGHIJKLMNOP"
 }
 ```
 
-Add `<TOTP_SECRET>` to your authenticator app as a manual setup key. Then verify the current six-digit code. `verify-software-token` proves that the authenticator app and Cognito agree on the TOTP secret by checking the six-digit code generated from that shared key.
+Associate software token:
+
+# TODO: Updated Screenshot
+![Associate software token](/assets/images/018-associate-software-token.png)
+
+Copy `SecretCode` into your authenticator app as a manual secret.
+
+Verify the software token with a valid TOTP code from your authenticator app:
 
 ```bash
+export TOTP_CODE="<FRESH_6_DIGIT_CODE>"
+
 aws cognito-idp verify-software-token \
-  --access-token "<TEMP_ACCESS_TOKEN>" \
-  --user-code "<MFA_CODE>" \
-  --friendly-device-name "Chewbacca CLI" \
-  --region "<REGION>" | jq
+  --access-token "$TEMP_ACCESS_TOKEN" \
+  --user-code "$TOTP_CODE" \
+  --friendly-device-name "Chewbacca CLI HTTPS" \
+  --region "$AWS_REGION" | jq
 ```
 
-Expected output:
+Expected:
 
 ```json
 {
@@ -953,262 +1041,91 @@ Expected output:
 }
 ```
 
-Set software token MFA as preferred. `set-user-mfa-preference` activates software-token MFA for this user and marks it as the factor Cognito should challenge during future sign-in attempts.
+Verify software token:
+
+# TODO: Updated Screenshot
+![Verify software token](/assets/images/104-verify-software-token.png)
+
+Set software token MFA as preferred:
 
 ```bash
 aws cognito-idp set-user-mfa-preference \
-  --access-token "<TEMP_ACCESS_TOKEN>" \
+  --access-token "$TEMP_ACCESS_TOKEN" \
   --software-token-mfa-settings Enabled=true,PreferredMfa=true \
-  --region "<REGION>"
-```
-
-Expected output:
-
-```text
-No output means the preference update succeeded.
-```
-
-> [!IMPORTANT]
-> `<TEMP_ACCESS_TOKEN>` is only for MFA enrollment. If this token expires during setup, run the direct password auth command again and use the new access token.
-
-
-### 14.3 Alternate Option: Enroll TOTP Through Managed Login
-
-This alternate path uses the hosted Cognito login page to enroll the same software-token MFA factor. It is useful for comparing the user-facing managed login experience with the CLI enrollment flow above. Both paths result in a user who can answer the later `SOFTWARE_TOKEN_MFA` challenge.
-
-1. Open **View login page** from the CLI app client.
-
-![View CLI app client login page](/assets/temp/076-11-cli-app-client-view-login-page.png)
-
-2. Sign in with username `chewbacca` and the temporary or permanent password you set for the user.
-
-![CLI app sign-in](/assets/temp/011-11-cli-app-signin.png)
-
-![CLI app sign-in screen](/assets/temp/096-11-cli-app-sign-in.png)
-
-3. If Cognito prompts for a password change, change the temporary password to the permanent password exported earlier.
-
-![CLI app change password](/assets/temp/052-11-cli-app-change-password.png)
-
-If the challenge session expires while you are learning the flow, restart the hosted login sequence and continue with a newly generated authenticator code.
-
-![Session expired warning](/assets/temp/110-11-session-expired-error.png)
-
-4. Continue to authenticator app setup.
-
-![Set up authenticator app](/assets/temp/025-11-set-up-authenticator-app.png)
-
-5. Scan the QR code or click **Show secret key** and add the key manually to your authenticator app.
-
-![Desktop authenticator setup](/assets/temp/115-11-desktop-authenticator-setup.png)
-
-6. Use a valid TOTP code from your authenticator app.
-
-![Desktop authenticator code generated](/assets/temp/101-11-desktop-authenticator-code-generated.png)
-
-7. Complete sign-in.
-
-![Successful sign-in](/assets/temp/034-11-successful-sign-in.png)
-
-After this path, continue with `USER_AUTH`. You do not need to repeat the CLI software-token enrollment commands unless you want to practice both methods.
-
-### 14.4 Manual Check: Start `USER_AUTH`
-
-`USER_AUTH` starts Cognito's choice-based authentication flow. Instead of sending the password immediately, the client identifies the user and asks Cognito which sign-in challenges are available. Cognito should answer with `SELECT_CHALLENGE` and a `Session` value that must be carried into the next command.
-
-```bash
-aws cognito-idp initiate-auth \
-  --client-id "<CLIENT_ID>" \
-  --auth-flow USER_AUTH \
-  --auth-parameters USERNAME="<USER_NAME>",SECRET_HASH="<SECRET_HASH>" \
-  --region "<REGION>" | jq
-```
-
-Expected output:
-
-```json
-{
-  "ChallengeName": "SELECT_CHALLENGE",
-  "Session": "AYABe...<SELECT_CHALLENGE_SESSION>",
-  "ChallengeParameters": {},
-  "AvailableChallenges": [
-    "PASSWORD",
-    "PASSWORD_SRP"
-  ]
-}
-```
-
-Copy `<SELECT_CHALLENGE_SESSION>` into the next command.
-
-> [!WARNING]
-> A Cognito `Session` belongs to one specific challenge chain. If you answer `SELECT_CHALLENGE` with a session from `USER_PASSWORD_AUTH`, an older run, another app client, or another user, Cognito can return `Invalid session due to a mismatched auth flow`. Restart from **14.4 Manual Check: Start `USER_AUTH`** and copy the newly returned `Session` from that response.
-
-### 14.5 Manual Check: Choose `PASSWORD`
-
-`respond-to-auth-challenge` answers the `SELECT_CHALLENGE` prompt. In this step, `ANSWER="PASSWORD"` tells Cognito which available sign-in method to use, and the same request supplies the password. If the primary factor succeeds and MFA is enabled, Cognito returns the next challenge plus a new `Session`.
-
-```bash
-aws cognito-idp respond-to-auth-challenge \
-  --client-id "<CLIENT_ID>" \
-  --challenge-name SELECT_CHALLENGE \
-  --challenge-responses USERNAME="<USER_NAME>",ANSWER="PASSWORD",PASSWORD="<USER_PASSWORD>",SECRET_HASH="<SECRET_HASH>" \
-  --session "<SELECT_CHALLENGE_SESSION>" \
-  --region "<REGION>" | jq
-```
-
-Expected output:
-
-```json
-{
-  "ChallengeName": "SOFTWARE_TOKEN_MFA",
-  "Session": "AYABe...<SOFTWARE_TOKEN_MFA_SESSION>",
-  "ChallengeParameters": {
-    "FRIENDLY_DEVICE_NAME": "Chewbacca CLI",
-    "USER_ID_FOR_SRP": "chewbacca"
-  }
-}
-```
-
-Copy `<SOFTWARE_TOKEN_MFA_SESSION>` into the next command.
-
-> [!WARNING]
-> Do not reuse the earlier `SELECT_CHALLENGE` session for MFA. The password challenge returns a new `Session`, and that new value is the only valid handoff into `SOFTWARE_TOKEN_MFA`.
-
-### 14.6 Manual Check: Respond To `SOFTWARE_TOKEN_MFA`
-
-This second `respond-to-auth-challenge` call answers the MFA prompt. The `Session` must be the one returned by the password step, and the MFA code must be current. A successful response ends the challenge chain and returns the Cognito token set.
-
-```bash
-aws cognito-idp respond-to-auth-challenge \
-  --client-id "<CLIENT_ID>" \
-  --challenge-name SOFTWARE_TOKEN_MFA \
-  --challenge-responses USERNAME="<USER_NAME>",SOFTWARE_TOKEN_MFA_CODE="<MFA_CODE>",SECRET_HASH="<SECRET_HASH>" \
-  --session "<SOFTWARE_TOKEN_MFA_SESSION>" \
-  --region "<REGION>" | jq
-```
-
-Expected output:
-
-```json
-{
-  "ChallengeParameters": {},
-  "AuthenticationResult": {
-    "AccessToken": "eyJraWQiOiJNek1LXC8yZzgz...eyJ1c2VybmFtZSI6ImNoZXdiYWNjYSJ9...<ACCESS_TOKEN_SIGNATURE>",
-    "ExpiresIn": 900,
-    "TokenType": "Bearer",
-    "RefreshToken": "eyJjdHkiOiJKV1QiLCJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAifQ...<REFRESH_TOKEN>",
-    "IdToken": "eyJraWQiOiJnVkkrSDRcL0Ja...eyJlbWFpbCI6ImNoZXdiYWNjYUBleGFtcGxlLmNvbSJ9...<ID_TOKEN_SIGNATURE>"
-  }
-}
+  --region "$AWS_REGION"
 ```
 
 > [!NOTE]
-> The real response contains full JWT/JWE strings. The examples shorten tokens for readability, while preserving their overall structure.
+> If the user already enrolled MFA through managed login, you can skip the enrollment commands and continue with `USER_AUTH`.
 
-For the HTTP API route test, copy `<ACCESS_TOKEN>`. The authorizer is already attached, so use this token in **Step 17** before it expires.
+> [!NOTE]
+> The two software-token screenshots above show the challenge-session enrollment variant. The primary command path in this runbook uses `TEMP_ACCESS_TOKEN`; both approaches are valid Cognito enrollment patterns when the session or access token belongs to the same active authentication flow.
 
-> [!WARNING]
-> Cognito challenge sessions are short-lived. If too much time passes between manual commands, restart from **14.4 Manual Check: Start `USER_AUTH`**.
+### 17.2 Alternate Option: Enroll TOTP Through Managed Login
 
-## 15. Export-Driven Authentication Run
+Use this option when you want to enroll MFA through the hosted Cognito login page instead of the CLI software-token commands.
 
-After completing the manual run, repeat the same authentication flow with shell exports. This pass improves repeatability and future test reuse.
+1. Open **View login page** from the CLI app client.
 
-> [!IMPORTANT]
-> If you are continuing in the same terminal session from the manual run and your variables are still set, continue directly to **15.1 Export `SECRET_HASH`**. If you opened a new terminal, skipped the manual run, or are returning later, collect the values below from the AWS Console and export them before continuing.
+# TODO: Updated Screenshot
+![View CLI app client login page](/assets/images/071-view-app-client-login-page.png)
 
-| Parameter | Console Location | Value |
-| --- | --- | --- |
-| Repo path | Local terminal | `<COGNITO_CLI_AUTH_FLOW_REPO_ROOT>` |
-| AWS region | AWS Console region selector | `us-east-1` |
-| App client ID | Cognito user pool -> App clients -> `<APP_CLIENT_NAME>` | `<CLIENT_ID>` |
-| App client secret | Cognito user pool -> App clients -> `<APP_CLIENT_NAME>` -> show client secret | `<CLIENT_SECRET>` |
-| Test username | Cognito user pool -> Users -> user details | `chewbacca` |
-| Test password | Password set during user creation/reset | `<USER_PASSWORD>` |
+2. Sign in with username `chewbacca` and the temporary password.
 
-Set the working directory:
+# TODO: Updated Screenshot
+![CLI app sign-in](/assets/images/011-app-client-sign-in.png)
 
-```bash
-export REPO_ROOT="<COGNITO_CLI_AUTH_FLOW_REPO_ROOT>"
-cd "$REPO_ROOT"
-```
+# TODO: Updated Screenshot
+![CLI app sign-in screen](/assets/images/088-app-client-sign-in-screen.png)
 
-Example:
+3. Change the temporary password to the permanent password exported earlier.
 
-```bash
-export REPO_ROOT="/Users/kirk/cognito-cli-auth-flow"
-cd "$REPO_ROOT"
-```
+# TODO: Updated Screenshot
+![CLI app change password](/assets/images/047-app-client-change-password.png)
 
-Export the remaining values:
+4. Continue to authenticator app setup.
 
-```bash
-export AWS_REGION="us-east-1"
-export CLIENT_ID="<CLIENT_ID>"
-export CLIENT_SECRET="<CLIENT_SECRET>"
-export TEST_USERNAME="chewbacca"
-export TEST_PASSWORD="<USER_PASSWORD>"
-```
+# TODO: Updated Screenshot
+![Set up authenticator app](/assets/images/024-set-up-authenticator-app.png)
 
-Validation:
+5. Scan the QR code or click **Show secret key** and add the key manually to your authenticator app.
 
-```bash
-echo "$REPO_ROOT"
-echo "$AWS_REGION"
-echo "$CLIENT_ID"
-echo "${CLIENT_SECRET:0:8}..."
-echo "$TEST_USERNAME"
-```
+# TODO: Updated Screenshot
+![Desktop authenticator setup](/assets/images/105-authenticator-secret-setup.png)
 
-> [!CAUTION]
-> Do not print the full `CLIENT_SECRET` in shared terminals, screenshots, commits, or notes. Show only a short prefix when validating that the variable is loaded.
+6. Use a valid TOTP code from your authenticator app.
 
-### 15.1 Export `SECRET_HASH`
+# TODO: Updated Screenshot
+![Desktop authenticator code generated](/assets/images/092-authenticator-code-generated.png)
 
-This is the same client-secret proof from the manual pass, stored in a shell variable so the remaining commands can be repeated quickly without recopying the hash.
+7. Complete sign-in.
 
-```bash
-cd "$REPO_ROOT"
+# TODO: Updated Screenshot
+![Successful sign-in](/assets/images/032-successful-sign-in.png)
 
-export SECRET_HASH=$(python3 shared/scripts/secret_hash.py \
-  "$TEST_USERNAME" \
-  "$CLIENT_ID" \
-  "$CLIENT_SECRET")
+After this path, continue with `USER_AUTH`. You do not need to repeat the CLI software-token enrollment commands unless you want to practice both methods.
 
-echo "${SECRET_HASH:0:20}"
-```
+### 17.3 Start `USER_AUTH`
 
-Expected output:
-
-```text
-<first-20-characters-of-secret-hash>
-```
-
-### 15.2 Export Run: Start `USER_AUTH`
-
-This repeats the choice-based `USER_AUTH` start step and stores Cognito's raw response. The challenge `Session` remains the important output. `jq` carries it forward instead of manual copying.
+Start `USER_AUTH` and save the returned `Session` value.
 
 ```bash
 export AUTH_RESPONSE=$(aws cognito-idp initiate-auth \
   --client-id "$CLIENT_ID" \
   --auth-flow USER_AUTH \
-  --auth-parameters USERNAME="$TEST_USERNAME",SECRET_HASH="$SECRET_HASH" \
+  --auth-parameters USERNAME="$USERNAME",SECRET_HASH="$SECRET_HASH" \
   --region "$AWS_REGION")
 
 echo "$AUTH_RESPONSE" | jq
 ```
 
-Expected output:
+Expected:
 
 ```json
 {
   "ChallengeName": "SELECT_CHALLENGE",
   "Session": "AYABe...<SELECT_CHALLENGE_SESSION>",
-  "ChallengeParameters": {},
-  "AvailableChallenges": [
-    "PASSWORD",
-    "PASSWORD_SRP"
-  ]
+  "AvailableChallenges": ["PASSWORD", "PASSWORD_SRP"]
 }
 ```
 
@@ -1219,83 +1136,68 @@ export SESSION=$(echo "$AUTH_RESPONSE" | jq -r '.Session')
 echo "${SESSION:0:20}"
 ```
 
-Expected output:
+`USER_AUTH` returns `SELECT_CHALLENGE`:
 
-```text
-AYABeMud54rEoSpP-o6C
-```
+# TODO: Updated Screenshot
+![Start USER_AUTH and receive SELECT_CHALLENGE](/assets/images/096-user-auth-select-challenge.png)
 
-### 15.3 Export Run: Choose `PASSWORD`
-
-This answers `SELECT_CHALLENGE` with the password method and captures the next response. If password validation succeeds, Cognito moves the flow to `SOFTWARE_TOKEN_MFA` and returns a replacement session for the MFA step.
+### 17.4 Answer `SELECT_CHALLENGE` With `PASSWORD`
 
 ```bash
 export PASSWORD_CHALLENGE_RESPONSE=$(aws cognito-idp respond-to-auth-challenge \
   --client-id "$CLIENT_ID" \
   --challenge-name SELECT_CHALLENGE \
-  --challenge-responses USERNAME="$TEST_USERNAME",ANSWER="PASSWORD",PASSWORD="$TEST_PASSWORD",SECRET_HASH="$SECRET_HASH" \
+  --challenge-responses USERNAME="$USERNAME",ANSWER="PASSWORD",PASSWORD="$USER_PASSWORD",SECRET_HASH="$SECRET_HASH" \
   --session "$SESSION" \
   --region "$AWS_REGION")
 
 echo "$PASSWORD_CHALLENGE_RESPONSE" | jq
 ```
 
-Expected output:
+Expected:
 
 ```json
 {
   "ChallengeName": "SOFTWARE_TOKEN_MFA",
-  "Session": "AYABe...<SOFTWARE_TOKEN_MFA_SESSION>",
-  "ChallengeParameters": {
-    "FRIENDLY_DEVICE_NAME": "Chewbacca CLI",
-    "USER_ID_FOR_SRP": "chewbacca"
-  }
+  "Session": "AYABe...<SOFTWARE_TOKEN_MFA_SESSION>"
 }
 ```
 
-Export the new session:
+Update the session:
 
 ```bash
 export SESSION=$(echo "$PASSWORD_CHALLENGE_RESPONSE" | jq -r '.Session')
 ```
 
-### 15.4 Export Run: Respond To `SOFTWARE_TOKEN_MFA`
+> [!WARNING]
+> Do not reuse the `SELECT_CHALLENGE` session for MFA. The password step returns a new session.
+
+`SELECT_CHALLENGE` answered with `PASSWORD`:
+
+# TODO: Updated Screenshot
+![Answer SELECT_CHALLENGE with PASSWORD](/assets/images/075-select-challenge-password.png)
+
+### 17.5 Respond To `SOFTWARE_TOKEN_MFA`
 
 Use a valid TOTP code from your authenticator app:
 
 ```bash
-export TOTP_CODE="123456"
-```
+export TOTP_CODE="<FRESH_6_DIGIT_CODE>"
 
-Respond to the MFA challenge:
-
-This command completes the exported challenge chain. It sends the current TOTP code with the latest `Session`. When Cognito accepts the MFA code, the response changes from another challenge to `AuthenticationResult`.
-
-```bash
 export MFA_RESPONSE=$(aws cognito-idp respond-to-auth-challenge \
   --client-id "$CLIENT_ID" \
   --challenge-name SOFTWARE_TOKEN_MFA \
-  --challenge-responses USERNAME="$TEST_USERNAME",SOFTWARE_TOKEN_MFA_CODE="$TOTP_CODE",SECRET_HASH="$SECRET_HASH" \
+  --challenge-responses USERNAME="$USERNAME",SOFTWARE_TOKEN_MFA_CODE="$TOTP_CODE",SECRET_HASH="$SECRET_HASH" \
   --session "$SESSION" \
   --region "$AWS_REGION")
 
 echo "$MFA_RESPONSE" | jq
 ```
 
-Expected output:
+MFA challenge response:
 
-```json
-{
-  "ChallengeParameters": {},
-  "AuthenticationResult": {
-    "AccessToken": "eyJraWQiOiJNek1LXC8yZzgz...<ACCESS_TOKEN_PAYLOAD>...<ACCESS_TOKEN_SIGNATURE>",
-    "ExpiresIn": 900,
-    "TokenType": "Bearer",
-    "RefreshToken": "eyJjdHkiOiJKV1QiLCJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAifQ...<REFRESH_TOKEN>",
-    "IdToken": "eyJraWQiOiJnVkkrSDRcL0Ja...eyJ0b2tlbl91c2UiOiJpZCIsImVtYWlsIjoiY2hld2JhY2NhQGV4YW1wbGUuY29tIn0...<ID_TOKEN_SIGNATURE>"
-  }
-}
-```
+# TODO: Updated Screenshot
+![Respond to SOFTWARE_TOKEN_MFA](/assets/images/080-software-token-mfa-response.png)
 
 Export tokens:
 
@@ -1309,171 +1211,31 @@ echo "${ID_TOKEN:0:24}"
 echo "${REFRESH_TOKEN:0:24}"
 ```
 
-Expected output:
+Returned token export:
 
-```text
-eyJraWQiOiJNek1LXC8yZzgz
-eyJraWQiOiJnVkkrSDRcL0Ja
-eyJjdHkiOiJKV1QiLCJlbmMi
-```
+# TODO: Updated Screenshot
+![Export returned tokens](/assets/images/098-export-returned-tokens.png)
+
+Authentication result:
+
+# TODO: Updated Screenshot
+![MFA response with AuthenticationResult](/assets/images/021-mfa-authentication-result.png)
 
 > [!IMPORTANT]
-> Access tokens expire after 15 minutes in this runbook. If API Gateway later returns `{"message":"The incoming token has expired"}` or a `401`, rerun the export-driven authentication flow and retry with a newly generated `ACCESS_TOKEN`.
+> Use `$ACCESS_TOKEN` for the protected HTTP API route tests. The ID token is still useful for inspecting identity claims, but the access token is the clearest token choice for these route checks.
 
-### 15.5 Token Helper Script Run
+## 18. Optional Direct Flow Shortcut
 
-After the manual and export-driven passes are working, use the Python helpers to make repeat token retrieval faster. These scripts intentionally use `USER_PASSWORD_AUTH`, so they require a **public app client with no client secret**. Keep the secret-bearing app client from Step 10 for the `SECRET_HASH` learning path, then create a second helper client for these scripts.
-
-Console path: open the same user pool -> **App clients** -> **Create app client**. Use a name like `chewbacca-auth-http-public-token-helper`, turn **Generate client secret** off, enable `ALLOW_USER_PASSWORD_AUTH` and `ALLOW_REFRESH_TOKEN_AUTH`, and keep the same 15-minute access and ID token validity.
-
-Equivalent CLI reference:
-
-```bash
-export PUBLIC_CLIENT_JSON=$(aws cognito-idp create-user-pool-client \
-  --user-pool-id "$USER_POOL_ID" \
-  --client-name "${PROJECT_NAME}-public-token-helper" \
-  --explicit-auth-flows ALLOW_USER_PASSWORD_AUTH ALLOW_REFRESH_TOKEN_AUTH \
-  --access-token-validity 15 \
-  --id-token-validity 15 \
-  --refresh-token-validity 1 \
-  --token-validity-units AccessToken=minutes,IdToken=minutes,RefreshToken=days \
-  --query 'UserPoolClient' \
-  --output json \
-  --region "$AWS_REGION")
-
-export COGNITO_PUBLIC_CLIENT_ID=$(echo "$PUBLIC_CLIENT_JSON" | jq -r '.ClientId')
-```
-
-Set up a local venv manually before running the helpers:
-
-```bash
-cd "$REPO_ROOT"
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r shared/scripts/requirements.txt
-```
-
-Export the values the scripts read. `API_BASE` should be your API Gateway `/prod` base URL. The example shape is `https://a9x4k2m7qp.execute-api.us-east-1.amazonaws.com/prod`; replace the random API ID with your own.
-
-```bash
-export AWS_REGION="us-east-1"
-export COGNITO_PUBLIC_CLIENT_ID="<PUBLIC_NO_SECRET_CLIENT_ID>"
-export COGNITO_USERNAME="$TEST_USERNAME"
-export COGNITO_PASSWORD="$TEST_PASSWORD"
-export API_BASE="${API_ENDPOINT}/prod"
-```
-
-Omit `COGNITO_PASSWORD` if you prefer the scripts to prompt for the password without storing it in the shell environment.
-
-Run the `easier_get_token.py` script:
-
-```bash
-python shared/scripts/easier_get_token.py
-```
-
-Use this to confirm the public client, user password, MFA prompt, and token response work without the manual `Session` copying.
-
-Run the `flavor_get_token.py` script:
-
-```bash
-python shared/scripts/flavor_get_token.py
-```
-
-This helper decodes the ID and access token claims, shows token expiration, and prints curl examples for the same `/prod/jedi` and `/prod/sith` routes used throughout this runbook.
-
-> [!NOTE]
-> These helpers are convenience tools after the learning pass. If the public client has a secret, Cognito will reject the script flow because the scripts do not send `SECRET_HASH`.
-
-## 16. Token Use
-
-| Token | What it represents | Use in this runbook |
-| --- | --- | --- |
-| Access token | Permission to call APIs | Use with API Gateway JWT authorizer |
-| ID token | User identity/profile claims | Useful for inspecting user identity |
-| Refresh token | Used to request new tokens | Keep private. Do not send to API Gateway |
-
-For API testing, use:
-
-```bash
-Authorization: Bearer $ACCESS_TOKEN
-```
-
-## 17. Test Protected API Routes With A Newly Generated Token
-
-Manual Check: test the Jedi route with the access token copied from **14.6 Manual Check: Respond To `SOFTWARE_TOKEN_MFA`**. Get `<API_ENDPOINT>` from the HTTP API stage URL.
-
-This request sends the Cognito access token as a bearer token. HTTP API JWT authorizers validate the token issuer, audience, signature, and expiration before forwarding the request to Lambda.
-
-```bash
-curl -i \
-  -H "Authorization: Bearer <ACCESS_TOKEN>" \
-  "<API_ENDPOINT>/prod/jedi?name=Chewbacca"
-```
-
-Expected output:
-
-```text
-HTTP/2 200
-...
-```
-
-Export Run: test the Jedi route with the exported access token:
-
-This is the repeatable version of the same authorization test. The token comes from the exported MFA response, so rerunning the export-driven auth flow refreshes the value used by `curl`.
-
-```bash
-curl -i \
-  -H "Authorization: Bearer $ACCESS_TOKEN" \
-  "${API_ENDPOINT}/prod/jedi?name=Chewbacca"
-```
-
-Expected output:
-
-```text
-HTTP/2 200
-...
-```
-
-> [!NOTE]
-> If the response says `The incoming token has expired`, do not chase the Lambda first. API Gateway rejected the request before invocation. Return to **Step 15**, complete the export-driven authentication run again, and retry with the new `ACCESS_TOKEN`.
-
-Export Run: test the Sith route:
-
-This confirms the authorizer is attached to both protected routes.
-
-```bash
-curl -i \
-  -H "Authorization: Bearer $ACCESS_TOKEN" \
-  "${API_ENDPOINT}/prod/sith?name=Chewbacca"
-```
-
-Expected output:
-
-```text
-HTTP/2 200
-...
-```
-
-Validation:
-
-- Public pre-authorizer test returns `200`.
-- Missing token after authorizer attachment returns `401`.
-- Valid token returns `200`.
-- Lambda logs appear only when authorization succeeds.
-
-## 18. Direct Flow Shortcut
-
-After MFA is enabled, `USER_PASSWORD_AUTH` skips `SELECT_CHALLENGE` and goes straight to password validation, then MFA.
-
-Use this shortcut after the manual learning pass. `USER_PASSWORD_AUTH` submits the password immediately, so Cognito can respond directly with the MFA challenge.
+Use this optional shortcut after validating the secret-bearing app client. `USER_PASSWORD_AUTH` skips `SELECT_CHALLENGE` and goes directly to password validation, then MFA.
 
 ```bash
 export DIRECT_AUTH_RESPONSE=$(aws cognito-idp initiate-auth \
   --client-id "$CLIENT_ID" \
   --auth-flow USER_PASSWORD_AUTH \
-  --auth-parameters USERNAME="$TEST_USERNAME",PASSWORD="$TEST_PASSWORD",SECRET_HASH="$SECRET_HASH" \
+  --auth-parameters USERNAME="$USERNAME",PASSWORD="$USER_PASSWORD",SECRET_HASH="$SECRET_HASH" \
   --region "$AWS_REGION")
+
+echo "$DIRECT_AUTH_RESPONSE" | jq
 ```
 
 Expected:
@@ -1481,45 +1243,29 @@ Expected:
 ```json
 {
   "ChallengeName": "SOFTWARE_TOKEN_MFA",
-  "Session": "AYABe...<SOFTWARE_TOKEN_MFA_SESSION>",
-  "ChallengeParameters": {
-    "FRIENDLY_DEVICE_NAME": "Chewbacca CLI",
-    "USER_ID_FOR_SRP": "chewbacca"
-  }
+  "Session": "AYABe...<SOFTWARE_TOKEN_MFA_SESSION>"
 }
 ```
 
-This is simpler for CLI testing, but it does not teach the `SELECT_CHALLENGE` negotiation step.
+Direct flow shortcut response:
+
+# TODO: Updated Screenshot
+![Direct flow shortcut to SOFTWARE_TOKEN_MFA](/assets/images/061-direct-flow-mfa-shortcut.png)
+
+This shortcut bypasses the `SELECT_CHALLENGE` negotiation step.
 
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| `Unable to verify secret hash` | Wrong username, client ID, client secret, or copied hash | Regenerate `SECRET_HASH` with the exact same username used in the auth request |
-| `InvalidParameterException` for `USER_AUTH` | App client does not allow `ALLOW_USER_AUTH` or region/account does not support choice-based auth | Recreate/update app client with `ALLOW_USER_AUTH`. Use `USER_PASSWORD_AUTH` if unavailable |
-| `Invalid session due to a mismatched auth flow` | The `Session` came from the wrong auth flow, an older challenge chain, another app client, or another user | Restart from `initiate-auth --auth-flow USER_AUTH`, copy the newly returned `SELECT_CHALLENGE` session, then use the new MFA session returned by the password step |
-| `NotAuthorizedException` | Wrong password, stale session, wrong secret hash, or expired MFA step | Start the flow again from `initiate-auth` |
-| `CodeMismatchException` | MFA code expired or copied incorrectly | Wait for a newly generated authenticator code |
-| `{"message":"The incoming token has expired"}` | Access token expired before the protected route test | Re-run the auth flow and export a newly generated `ACCESS_TOKEN` |
-| API returns `401` | Missing token, expired token, wrong issuer, wrong audience/client ID | Re-run the MFA flow and export a newly generated `ACCESS_TOKEN` |
-| API returns `500` | Lambda integration or function error | Check CloudWatch logs for the Lambda |
-| Lambda never logs during failed auth | Expected behavior | API Gateway rejects invalid JWTs before Lambda runs |
-
-## Final Check
-
-You have completed the HTTP API runbook when you can explain this flow without looking:
-
-```text
-SECRET_HASH proves the app client secret
-USER_AUTH starts negotiation
-SELECT_CHALLENGE lets the client choose PASSWORD
-PASSWORD validates the primary factor
-SOFTWARE_TOKEN_MFA validates the second factor
-Cognito issues JWT tokens
-API Gateway validates the access token
-Lambda only runs after authorization succeeds
-CloudWatch proves what actually happened
-```
+| `Unable to verify secret hash` | Wrong username, client ID, client secret, or copied hash | Regenerate `SECRET_HASH` using the exact username, client ID, and client secret |
+| `InvalidParameterException` for `USER_AUTH` | App client does not allow `ALLOW_USER_AUTH` | Edit the app client and enable choice-based sign-in |
+| `Invalid session` | Session reused from the wrong flow, user, app client, or expired challenge chain | Restart from `USER_AUTH` and use each new session in order |
+| `CodeMismatchException` | Expired or incorrect TOTP code | Wait for a newly generated code and retry |
+| MFA not challenged after password | User has not enrolled TOTP or MFA preference is not set | Complete MFA enrollment again |
+| `{"message":"Unauthorized"}` with token | Wrong token type, expired token, bad header, issuer/audience mismatch, or stale route configuration | Use a newly generated `$ACCESS_TOKEN`, confirm the JWT authorizer issuer and audience, and recheck the route authorizer attachment |
+| Route still public | JWT authorizer is not attached to the route, or the route update is not active yet | Recheck the route authorizer attachment and wait for the auto-deployed `prod` stage to apply the route update |
+| Lambda never logs during failed auth | Expected behavior | API Gateway rejects invalid requests before Lambda runs |
 
 ## References
 

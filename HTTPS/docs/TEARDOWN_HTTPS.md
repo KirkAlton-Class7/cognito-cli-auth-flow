@@ -3,35 +3,63 @@
 Use this to tear down the base HTTPS/HTTP API Cognito auth infrastructure. It does not remove token-detector resources.
 
 > [!WARNING]
-> These commands delete the HTTP API, Lambda functions, Cognito user pool, CloudWatch log groups, and IAM role. Confirm you are using the HTTPS values before running teardown.
+> These commands delete the HTTP API, Lambda functions, Cognito user pool, CloudWatch log groups, and IAM roles. Confirm you are using the HTTPS values before running teardown.
 
-## 1. Export Values
+## 1. Create And Load The Environment File
+
+An environment file helps simplify teardown and provides a record of planned values and resource outputs. Copy the dotenv template, rename the copy to `.env`, update the values for the environment you want to remove, then reload it before running commands that depend on those values.
+
+Copy the template if `.env` does not already exist:
 
 ```bash
-export AWS_REGION="us-east-1"
-export PROJECT_NAME="chewbacca-auth-http"
+export REPO_ROOT="/Users/kirk/devsecops/cognito-cli-auth-flow"
+export ENV_FILE="$REPO_ROOT/HTTPS/.env"
 
-export JEDI_FUNCTION="${PROJECT_NAME}-jedi-python"
-export SITH_FUNCTION="${PROJECT_NAME}-sith-node"
-export LAMBDA_ROLE_NAME="${PROJECT_NAME}-lambda-basic-role"
+cp "$REPO_ROOT/HTTPS/env.example" "$ENV_FILE"
+```
 
-export API_NAME="${PROJECT_NAME}-api"
-export USER_POOL_NAME="${PROJECT_NAME}-users"
+Open `.env` and confirm these values match the HTTPS resources you want to remove:
+
+```bash
+code "$ENV_FILE"
+```
+
+```bash
+AWS_REGION="us-east-1"
+PROJECT_NAME="chewbacca-auth-http"
+JEDI_FUNCTION="${PROJECT_NAME}-jedi-python"
+SITH_FUNCTION="${PROJECT_NAME}-sith-node"
+PYTHON_LAMBDA_ROLE_NAME="${PROJECT_NAME}-lambda-python-role"
+NODE_LAMBDA_ROLE_NAME="${PROJECT_NAME}-lambda-node-role"
+API_NAME="${PROJECT_NAME}-api"
+USER_POOL_NAME="${PROJECT_NAME}-users"
+API_ID=""
+USER_POOL_ID=""
+```
+
+Load `.env`:
+
+```bash
+set -a
+source "$ENV_FILE"
+set +a
 ```
 
 ## 2. Look Up Generated IDs
 
+If `.env` does not already contain generated IDs, look them up from AWS:
+
 ```bash
-export HTTP_API_ID=$(aws apigatewayv2 get-apis \
+export HTTP_API_ID="${API_ID:-$(aws apigatewayv2 get-apis \
   --query "Items[?Name=='${API_NAME}'].ApiId | [0]" \
   --output text \
-  --region "$AWS_REGION")
+  --region "$AWS_REGION")}"
 
-export USER_POOL_ID=$(aws cognito-idp list-user-pools \
+export USER_POOL_ID="${USER_POOL_ID:-$(aws cognito-idp list-user-pools \
   --max-results 60 \
   --query "UserPools[?Name=='${USER_POOL_NAME}'].Id | [0]" \
   --output text \
-  --region "$AWS_REGION")
+  --region "$AWS_REGION")}"
 ```
 
 Confirm the active teardown values:
@@ -39,11 +67,12 @@ Confirm the active teardown values:
 ```bash
 echo "$AWS_REGION"
 echo "$PROJECT_NAME"
-echo "$HTTP_API_ID"
+echo "${HTTP_API_ID}"
 echo "$USER_POOL_ID"
 echo "$JEDI_FUNCTION"
 echo "$SITH_FUNCTION"
-echo "$LAMBDA_ROLE_NAME"
+echo "$PYTHON_LAMBDA_ROLE_NAME"
+echo "$NODE_LAMBDA_ROLE_NAME"
 ```
 
 ## 3. Delete Base HTTPS Resources
@@ -88,20 +117,27 @@ aws logs delete-log-group \
   --region "$AWS_REGION"
 ```
 
-## 5. Delete IAM Role
+## 5. Delete IAM Roles
 
 ```bash
 aws iam detach-role-policy \
-  --role-name "$LAMBDA_ROLE_NAME" \
+  --role-name "$PYTHON_LAMBDA_ROLE_NAME" \
   --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
 aws iam delete-role \
-  --role-name "$LAMBDA_ROLE_NAME"
+  --role-name "$PYTHON_LAMBDA_ROLE_NAME"
+
+aws iam detach-role-policy \
+  --role-name "$NODE_LAMBDA_ROLE_NAME" \
+  --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+aws iam delete-role \
+  --role-name "$NODE_LAMBDA_ROLE_NAME"
 ```
 
 ## 6. Verify
 
-The API deletion removes HTTP API routes, integrations, stages, and the authorizer. Validate the API itself, then validate each standalone resource that was created outside the API container.
+The HTTP API deletion removes routes, integrations, stages, and the authorizer. Validate the API itself, then validate each standalone resource that was created outside the API container.
 
 ```bash
 aws apigatewayv2 get-api \
@@ -129,12 +165,15 @@ aws logs describe-log-groups \
   --region "$AWS_REGION"
 
 aws iam get-role \
-  --role-name "$LAMBDA_ROLE_NAME"
+  --role-name "$PYTHON_LAMBDA_ROLE_NAME"
+
+aws iam get-role \
+  --role-name "$NODE_LAMBDA_ROLE_NAME"
 ```
 
 Expected result:
 
-- HTTP API, Cognito user pool, Lambda functions, and IAM role checks should return not-found style errors.
+- API Gateway, Cognito user pool, Lambda functions, and IAM role checks should return not-found style errors.
 - CloudWatch log group checks should return an empty `logGroups` list for each Lambda function.
 
 ## References

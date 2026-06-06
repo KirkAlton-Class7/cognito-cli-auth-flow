@@ -33,15 +33,13 @@ Start with one of the base API implementations:
 
 ## Architecture Summary
 
-```text
-Cognito token helper
-  -> DynamoDB token record
-  -> API Gateway /prod/jedi or /prod/sith
-  -> route Lambda marks token used
-  -> detector Lambda scans for stale unused tokens
-  -> CloudWatch metric filter
-  -> SNS alert
-```
+- Cognito token helper
+- DynamoDB token record
+- API Gateway /prod/jedi or /prod/sith
+- route Lambda marks token used
+- detector Lambda scans for stale unused tokens
+- CloudWatch metric filter
+- SNS alert
 
 ## Get Started
 

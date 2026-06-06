@@ -1,107 +1,83 @@
 # Cognito Auth Flow
 
-Basic AWS lab for learning Cognito authentication flows, JWT validation, API Gateway, and Lambda with a Chewbacca, Jedi, and Sith theme.
+AWS Cognito authentication flow reference using API Gateway, Lambda, JWT authorizers, software-token MFA, and small themed Jedi/Sith route handlers.
 
-This repo is intentionally smaller than Tawny Port. It isolates the authentication mechanics so you can see how Cognito behaves before putting the pattern inside a larger application.
+This repository keeps the application intentionally small so the authentication boundary stays visible. The same Cognito identity flow is implemented through both API Gateway HTTP API and REST API patterns, with separate runbooks, lab walkthroughs, and teardown references.
 
-## Implementation
+## What This Demonstrates
 
-The lab demonstrates the same Cognito identity flow across two API Gateway implementations:
+- Chewbacca test user
+- Cognito User Pool
+- app clients for SECRET_HASH, managed login, and token helper scripts
+- USER_AUTH / SELECT_CHALLENGE
+- PASSWORD
+- SOFTWARE_TOKEN_MFA
+- Cognito JWT tokens
+- API Gateway protected route
+- Lambda
+- CloudWatch Logs
 
-* The runbooks and labs include Console-first and CLI-first paths for creating user pools, app clients, Lambda functions, API Gateway routes/resources, and authorizers.
-* The CLI walks through `USER_AUTH`, `SELECT_CHALLENGE`, `PASSWORD`, `SOFTWARE_TOKEN_MFA`, manual token inspection, exported token reuse, helper-script token retrieval, and route testing.
-* API Gateway protects simple Jedi and Sith Lambda routes after the infrastructure is in place.
-* Lambda only runs after API Gateway accepts the Cognito token.
-* CloudWatch proves whether the request actually reached the function.
+The protected routes are intentionally simple:
 
-Start with the API Gateway style you want to practice:
-
-* [HTTPS Version](HTTPS/README.md) (HTTP API JWT authorizer)
-* [REST Version](REST/README.md) (REST API Cognito User Pool authorizer)
-* [Token Detector](deploy-token-detector/README.md) (token-use tracking after a base auth flow exists)
-* [Unused Token Detector Lab](deploy-token-detector/labs/token-detector/LAB-README.md) (guided editing path for the token detector)
-
-> [!IMPORTANT]
-> Use separate project names when running both versions. The runbooks already do this with `chewbacca-auth-http` and `chewbacca-auth-rest`, so both labs can exist in the same AWS account and region.
-
-> [!NOTE]
-> The commands assume the repo lives at `"$HOME/cognito-cli-auth-flow"`. If you clone it somewhere else, set `LAB_REPO` to that path before packaging Lambda code or running helper scripts.
-
-## Platform Overview
-
-The flow stays the same in both versions:
-
-```text
-Chewbacca CLI user
-  -> Cognito User Pool
-  -> USER_AUTH / SELECT_CHALLENGE
-  -> PASSWORD
-  -> SOFTWARE_TOKEN_MFA
-  -> JWT tokens
-  -> API Gateway protected route
-  -> Lambda
-  -> CloudWatch Logs
-```
-
-The API routes are intentionally small:
-
-| Route | Runtime | Theme role |
+| Route | Runtime | Purpose |
 | --- | --- | --- |
-| `/prod/jedi` | Python | Jedi Council response path |
-| `/prod/sith` | Node.js | Sith response path |
+| `/prod/jedi` | Python | Validates the Python Lambda path behind Cognito authorization |
+| `/prod/sith` | Node.js | Validates the Node.js Lambda path behind Cognito authorization |
+
+## Implementations
+
+Start with the API Gateway implementation you want to build:
+
+| Path | Use |
+| --- | --- |
+| [HTTPS](HTTPS/README.md) | HTTP API implementation using a Cognito JWT authorizer |
+| [REST](REST/README.md) | REST API implementation using a Cognito User Pool authorizer |
+| [Token Detector](deploy-token-detector/README.md) | Token-use tracking extension after a base auth flow exists |
 
 ## HTTPS vs REST
 
-Both versions preserve the same user, challenge, MFA, and token flow. The difference is how API Gateway validates the token.
+Both implementations preserve the same Cognito user, challenge, MFA, and token flow. The main difference is how API Gateway models routes and validates tokens.
 
-| Area | HTTPS Version | REST Version |
+| Area | HTTPS | REST |
 | --- | --- | --- |
 | API Gateway type | HTTP API | REST API |
-| Authorizer type | HTTP API JWT authorizer | REST API Cognito User Pool authorizer |
-| Token used in protected route tests | Cognito access token | Cognito access token when authorization scopes are configured |
+| Authorizer type | JWT authorizer | Cognito User Pool authorizer |
 | CLI namespace | `apigatewayv2` | `apigateway` |
 | Route model | Routes such as `GET /jedi` | Resources and methods such as `/jedi` + `GET` |
-| Deployment behavior | Auto-deploy stage | Explicit deployment required after method changes |
-| Custom authorizer Lambda | Not needed | Not needed for this Cognito-only lab |
+| Deployment behavior | Auto-deploy stage | Explicit deployment after method or authorizer changes |
+| Protected-route token | Cognito access token | Cognito access token when method authorization scopes are configured |
+| Custom authorizer Lambda | Not required | Not required |
 
 > [!NOTE]
-> A Lambda authorizer is not required here. Cognito issues the token, and both API Gateway implementations can validate Cognito tokens natively. Use a Lambda authorizer only when you need custom policy logic or a non-Cognito identity provider.
+> Cognito issues the token, and both API Gateway implementations can validate Cognito tokens natively. A Lambda authorizer is only needed when custom policy logic or a non-Cognito identity provider is required.
 
-## Build Mode
+## Documentation
 
-Use either the **AWS Console** or the matching **CLI runbook** for infrastructure creation:
+Use the runbooks for the concise build path:
 
-```text
-IAM role
-Lambda functions
-Cognito user pool and app client
-API Gateway API, routes/resources, integrations, stages, and authorizers
-```
+| Implementation | CLI Runbook | Console Runbook | Teardown |
+| --- | --- | --- | --- |
+| HTTPS | [RUNBOOK-CLI.md](HTTPS/docs/RUNBOOK-CLI.md) | [RUNBOOK-CONSOLE.md](HTTPS/docs/RUNBOOK-CONSOLE.md) | [TEARDOWN_HTTPS.md](HTTPS/docs/TEARDOWN_HTTPS.md) |
+| REST | [RUNBOOK-CLI.md](REST/docs/RUNBOOK-CLI.md) | [RUNBOOK-CONSOLE.md](REST/docs/RUNBOOK-CONSOLE.md) | [TEARDOWN_REST.md](REST/docs/TEARDOWN_REST.md) |
 
-Use the **CLI** for the authentication workflow and validation. Run the auth flow more than one way on purpose:
+Use the lab walkthroughs for screenshots, deeper explanations, and step-by-step challenge-flow practice:
 
-```text
-Manual pass:
-  read each Cognito response
-  copy Session values by hand
-  paste MFA codes by hand
-  observe where tokens appear
+| Area | Guided Path |
+| --- | --- |
+| HTTPS auth flow | [HTTPS Lab README](HTTPS/labs/cognito-auth-flow-HTTPS/LAB-README.md) |
+| REST auth flow | [REST Lab README](REST/labs/cognito-auth-flow-REST/LAB-README.md) |
+| Token detector extension | [Unused Token Detector Lab README](deploy-token-detector/labs/token-detector/LAB-README.md) |
 
-Export pass:
-  export generated IDs
-  generate SECRET_HASH
-  export Session and JWT values
-  repeat curl route tests quickly
+## Build Modes
 
-Token helper script pass:
-  create or use a public no-secret app client
-  set up a local Python venv
-  run easier_get_token.py for direct token retrieval
-  run flavor_get_token.py for decoded claims and curl examples
-```
+Each implementation supports two infrastructure build modes:
 
-> [!IMPORTANT]
-> Do the manual CLI pass first. Copying the `Session` value from `SELECT_CHALLENGE` into the next command, then copying the new `Session` into the MFA command, is the part that makes Cognito's challenge flow click. The export-based path is included after that so you can repeat the lab without turning every run into archaeology.
+| Mode | Best For |
+| --- | --- |
+| CLI | Repeatable rebuilds and direct AWS API visibility |
+| Console | Visual confirmation of service boundaries and AWS configuration screens |
+
+Both modes validate the deployed flow with token helper scripts, Cognito-issued JWTs, protected route calls, and CloudWatch logs.
 
 ## Repository Structure
 
@@ -113,12 +89,7 @@ cognito-cli-auth-flow/
 │   │   ├── deploy-token-detector-runbook.md
 │   │   ├── TEARDOWN_HTTPS.md
 │   │   └── TEARDOWN_REST.md
-│   ├── labs/
-│   │   └── token-detector/
-│   │       ├── LAB-README.md
-│   │       ├── lab-docs/
-│   │       ├── quick-deployment/
-│   │       └── sandbox/
+│   ├── labs/token-detector/
 │   ├── lambda-code/
 │   └── scripts/
 ├── HTTPS/
@@ -127,12 +98,7 @@ cognito-cli-auth-flow/
 │   │   ├── RUNBOOK-CLI.md
 │   │   ├── RUNBOOK-CONSOLE.md
 │   │   └── TEARDOWN_HTTPS.md
-│   └── labs/
-│       └── cognito-auth-flow-HTTPS/
-│           ├── LAB-README.md
-│           └── lab-docs/
-│               ├── LAB-CLI.md
-│               └── LAB-CONSOLE.md
+│   └── labs/cognito-auth-flow-HTTPS/
 ├── REST/
 │   ├── README.md
 │   ├── architecture.md
@@ -140,26 +106,20 @@ cognito-cli-auth-flow/
 │   │   ├── RUNBOOK-CLI.md
 │   │   ├── RUNBOOK-CONSOLE.md
 │   │   └── TEARDOWN_REST.md
-│   └── labs/
-│       └── cognito-auth-flow-REST/
-│           ├── LAB-README.md
-│           └── lab-docs/
-│               ├── LAB-CLI.md
-│               └── LAB-CONSOLE.md
+│   └── labs/cognito-auth-flow-REST/
+├── assets/images/
+├── requirements.txt
 └── shared/
     ├── lambda-code/
     │   ├── jedi_python.py
     │   └── sith_node.js
     └── scripts/
-        ├── requirements.txt
         ├── secret_hash.py
         ├── easier_get_token.py
         └── flavor_get_token.py
 ```
 
 ## Shared Code
-
-The Lambda and helper script files are shared across both implementations:
 
 | Path | Purpose |
 | --- | --- |
@@ -168,20 +128,10 @@ The Lambda and helper script files are shared across both implementations:
 | [shared/scripts/secret_hash.py](shared/scripts/secret_hash.py) | Cognito `SECRET_HASH` helper for app clients with secrets |
 | [shared/scripts/easier_get_token.py](shared/scripts/easier_get_token.py) | Direct `USER_PASSWORD_AUTH` token helper for a public no-secret app client |
 | [shared/scripts/flavor_get_token.py](shared/scripts/flavor_get_token.py) | Token helper that decodes claims and prints Jedi/Sith curl examples |
-| [shared/scripts/requirements.txt](shared/scripts/requirements.txt) | Python dependency list for the helper-script venv |
+| [requirements.txt](requirements.txt) | Python dependency list for token helper scripts |
 
-## Learning Outcome
+## Operating Notes
 
-You are finished when you can explain this chain confidently:
+Use separate project names when running both API Gateway implementations in the same AWS account and region. The provided docs use `chewbacca-auth-http` for HTTP API and `chewbacca-auth-rest` for REST API.
 
-```text
-SECRET_HASH proves the app client secret
-USER_AUTH starts negotiation
-SELECT_CHALLENGE lets the client choose PASSWORD
-PASSWORD validates the primary factor
-SOFTWARE_TOKEN_MFA validates the second factor
-Cognito issues JWT tokens
-API Gateway validates the access token
-Lambda runs only after authorization succeeds
-CloudWatch shows what actually happened
-```
+The examples assume the repository is available at `"$HOME/cognito-cli-auth-flow"` or that `REPO_ROOT` points to the actual clone path before packaging Lambda code or running token helper scripts.

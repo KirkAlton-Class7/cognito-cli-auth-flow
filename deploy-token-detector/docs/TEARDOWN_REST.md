@@ -2,45 +2,84 @@
 
 Use this to tear down the REST Cognito auth infrastructure plus the unused-token detector add-on. Skip any command for a resource you did not create.
 
-## 1. Export Values
+> [!WARNING]
+> These commands delete API Gateway, Lambda, Cognito, DynamoDB, EventBridge Scheduler, CloudWatch, SNS, and IAM resources. Confirm you are using the REST values before running teardown.
+
+## 1. Create And Load The Environment File
+
+An environment file helps simplify teardown and provides a record of planned values and resource outputs. Copy the dotenv template, rename the copy to `.env`, update the values for the environment you want to remove, then reload it before running commands that depend on those values.
+
+Copy the template if `.env` does not already exist:
 
 ```bash
-export AWS_REGION="us-east-1"
-export PROJECT_NAME="chewbacca-auth-rest"
+export REPO_ROOT="/Users/kirk/devsecops/cognito-cli-auth-flow"
+export ENV_FILE="$REPO_ROOT/deploy-token-detector/.env"
 
-export JEDI_FUNCTION="${PROJECT_NAME}-jedi-python"
-export SITH_FUNCTION="${PROJECT_NAME}-sith-node"
-export TOKEN_DETECTOR_FUNCTION="${PROJECT_NAME}-unused-token-detector"
+cp "$REPO_ROOT/deploy-token-detector/env.example" "$ENV_FILE"
+```
 
-export LAMBDA_ROLE_NAME="${PROJECT_NAME}-lambda-basic-role"
-export API_NAME="${PROJECT_NAME}-api"
-export USER_POOL_NAME="${PROJECT_NAME}-users"
+Open `.env` and confirm these values match the resources you want to remove:
 
-export TOKEN_TABLE_NAME="${PROJECT_NAME}-jedi-token-holocron"
-export TOKEN_SCAN_SCHEDULE="${PROJECT_NAME}-unused-token-check"
-export TOKEN_ALERT_TOPIC="${PROJECT_NAME}-auth-alerts"
-export TOKEN_ALERT_FILTER_NAME="${PROJECT_NAME}-unused-token-filter"
-export TOKEN_ALERT_ALARM_NAME="${PROJECT_NAME}-unused-token-alarm"
+```bash
+code "$ENV_FILE"
+```
+
+```bash
+AWS_REGION="us-east-1"
+PROJECT_NAME="chewbacca-auth-rest"
+JEDI_FUNCTION="${PROJECT_NAME}-jedi-python"
+SITH_FUNCTION="${PROJECT_NAME}-sith-node"
+TOKEN_DETECTOR_FUNCTION="${PROJECT_NAME}-unused-token-detector"
+LAMBDA_ROLE_NAME="${PROJECT_NAME}-lambda-basic-role"
+API_NAME="${PROJECT_NAME}-api"
+USER_POOL_NAME="${PROJECT_NAME}-users"
+TOKEN_TABLE_NAME="${PROJECT_NAME}-jedi-token-holocron"
+TOKEN_SCAN_SCHEDULE="${PROJECT_NAME}-unused-token-check"
+TOKEN_ALERT_TOPIC="${PROJECT_NAME}-auth-alerts"
+TOKEN_ALERT_FILTER_NAME="${PROJECT_NAME}-unused-token-filter"
+TOKEN_ALERT_ALARM_NAME="${PROJECT_NAME}-unused-token-alarm"
+```
+
+Load `.env`:
+
+```bash
+set -a
+source "$ENV_FILE"
+set +a
 ```
 
 ## 2. Look Up Generated IDs
 
+If `.env` does not already contain generated IDs, look them up from AWS:
+
 ```bash
-export REST_API_ID=$(aws apigateway get-rest-apis \
+export REST_API_ID="${REST_API_ID:-$(aws apigateway get-rest-apis \
   --query "items[?name=='${API_NAME}'].id | [0]" \
   --output text \
-  --region "$AWS_REGION")
+  --region "$AWS_REGION")}"
 
-export USER_POOL_ID=$(aws cognito-idp list-user-pools \
+export USER_POOL_ID="${USER_POOL_ID:-$(aws cognito-idp list-user-pools \
   --max-results 60 \
   --query "UserPools[?Name=='${USER_POOL_NAME}'].Id | [0]" \
   --output text \
-  --region "$AWS_REGION")
+  --region "$AWS_REGION")}"
 
-export TOKEN_ALERT_TOPIC_ARN=$(aws sns list-topics \
+export TOKEN_ALERT_TOPIC_ARN="${TOKEN_ALERT_TOPIC_ARN:-$(aws sns list-topics \
   --query "Topics[?ends_with(TopicArn, ':${TOKEN_ALERT_TOPIC}')].TopicArn | [0]" \
   --output text \
-  --region "$AWS_REGION")
+  --region "$AWS_REGION")}"
+```
+
+Confirm the active teardown values:
+
+```bash
+echo "$AWS_REGION"
+echo "$PROJECT_NAME"
+echo "${REST_API_ID}"
+echo "$USER_POOL_ID"
+echo "$TOKEN_ALERT_TOPIC_ARN"
+echo "$TOKEN_TABLE_NAME"
+echo "$TOKEN_DETECTOR_FUNCTION"
 ```
 
 ## 3. Delete Detector Alerting
@@ -81,7 +120,7 @@ aws lambda delete-function \
   --region "$AWS_REGION"
 ```
 
-## 5. Delete REST API, Cognito, And DynamoDB
+## 5. Delete API Gateway, Cognito, And DynamoDB
 
 ```bash
 aws apigateway delete-rest-api \
