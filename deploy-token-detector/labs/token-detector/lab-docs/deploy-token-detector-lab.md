@@ -89,7 +89,7 @@ echo "$API_BASE"
 
 ## 2. Create The Jedi Token Holocron Table
 
-Console path: **DynamoDB** -> **Tables** -> **Create table**.
+Console navigation: **DynamoDB** -> **Tables** -> **Create table**.
 
 Use these values:
 
@@ -144,7 +144,7 @@ echo "$SITH_FUNCTION"
 
 Attach this inline policy to the role used by those functions.
 
-Console path: **IAM** -> **Roles** -> open the Lambda role -> **Add permissions** -> **Create inline policy** -> JSON.
+Console navigation: **IAM** -> **Roles** -> open the Lambda role -> **Add permissions** -> **Create inline policy** -> JSON.
 
 ```json
 {
@@ -264,13 +264,13 @@ Also update the printed curl examples so they include the token ID header:
 -H "x-token-id: {token_id}"
 ```
 
-The finished reference version is here:
+The finished reference implementation is here:
 
 ```bash
 deploy-token-detector/labs/token-detector/quick-deployment/get_token.py
 ```
 
-Run the sandbox version:
+Run the sandbox copy:
 
 ```bash
 cd "$LAB_REPO"
@@ -557,7 +557,7 @@ ALERT: Token unused for user chewbacca
 
 Use an EventBridge **schedule**, not a classic rule.
 
-Console path: **Amazon EventBridge** -> **Scheduler** -> **Create schedule**.
+Console navigation: **Amazon EventBridge** -> **Scheduler** -> **Create schedule**.
 
 Use these values:
 
@@ -653,7 +653,7 @@ Use this checklist before you consider the token detector lab complete:
 
 ## Final Check
 
-You are ready to leave this token detector lab when you can explain the full path without looking:
+You are ready to leave this token detector lab when you can explain the full flow without looking:
 
 ```text
 Cognito issues JWT tokens

@@ -1,6 +1,6 @@
 # Cognito Auth Flow - REST Lab - Console
 
-This lab teaches the REST implementation of the Cognito auth flow. You will practice the AWS console path, use a local `.env` file for planned values, resource outputs, and CLI validation, and keep the conceptual checkpoints that explain how Cognito, API Gateway, Lambda, and MFA fit together.
+This lab teaches the REST implementation of the Cognito auth flow. You will practice the AWS Console deployment, use a local `.env` file for planned values, resource outputs, and CLI validation, and keep the conceptual checkpoints that explain how Cognito, API Gateway, Lambda, and MFA fit together.
 
 This flow uses:
 
@@ -610,7 +610,7 @@ Jedi route test before the authorizer:
 
 Both unprotected route tests:
 
-![Unprotected API path tests](/assets/images/015-unprotected-api-tests.png)
+![Unprotected API route tests](/assets/images/015-unprotected-api-tests.png)
 
 Validation:
 
@@ -922,7 +922,7 @@ This lab includes both admin-created user flow and managed-login completion flow
 
 ### 12.2 Managed Login Completion Path
 
-Use this path when you want the user to experience the hosted Cognito login flow:
+Use this option when you want the user to experience the hosted Cognito login flow:
 
 #### Steps
 
@@ -966,7 +966,7 @@ If the challenge takes too long, Cognito may show a session expiration warning:
 > [!NOTE]
 > It is common to see expired session warnings during early lab passes. This confirms the auth flow session duration is enforcing time pressure. The authentication challenge must be completed within the configured 5-minute session duration. If session expiration keeps blocking learning, return to **11.1** or **11.2** and use the 60-minute token validity values while keeping the 5-minute challenge session in mind.
 
-Alternate temporary-password challenge path:
+Alternate temporary-password challenge flow:
 
 ![Respond to new password challenge](/assets/images/014-new-password-challenge.png)
 
@@ -1199,11 +1199,11 @@ aws cognito-idp set-user-mfa-preference \
 > If the user already enrolled MFA through managed login, you can skip the enrollment commands and continue with `USER_AUTH`.
 
 > [!NOTE]
-> The two software-token screenshots above show the challenge-session enrollment variant. The primary command path in this lab uses `TEMP_ACCESS_TOKEN`; both approaches are valid Cognito enrollment patterns when the session or access token belongs to the same active authentication flow.
+> The two software-token screenshots above show the challenge-session enrollment variant. The primary command flow in this lab uses `TEMP_ACCESS_TOKEN`; both approaches are valid Cognito enrollment patterns when the session or access token belongs to the same active authentication flow.
 
 ### 15.2 Alternate Option: Enroll TOTP Through Managed Login
 
-This alternate path uses the hosted Cognito login page to enroll the same software-token MFA factor. It is useful for comparing the user-facing managed login experience with the CLI enrollment flow above. Both paths result in a user who can answer the later `SOFTWARE_TOKEN_MFA` challenge.
+This alternate flow uses the hosted Cognito login page to enroll the same software-token MFA factor. It is useful for comparing the user-facing managed login experience with the CLI enrollment flow above. Both flows result in a user who can answer the later `SOFTWARE_TOKEN_MFA` challenge.
 
 1. Open **View login page** from the CLI app client.
 
@@ -1239,7 +1239,7 @@ If the challenge session expires while you are learning the flow, restart the ho
 
 ![Successful sign-in](/assets/images/032-successful-sign-in.png)
 
-After this path, continue with `USER_AUTH`. You do not need to repeat the CLI software-token enrollment commands unless you want to practice both methods.
+After this flow, continue with `USER_AUTH`. You do not need to repeat the CLI software-token enrollment commands unless you want to practice both methods.
 
 ### 15.3 Start `USER_AUTH`
 
@@ -1586,7 +1586,7 @@ Use this checklist before you consider the REST lab complete:
 
 ## Final Check
 
-You are ready to leave this REST lab when you can explain the full path without looking:
+You are ready to leave this REST lab when you can explain the full flow without looking:
 
 ```text
 Chewbacca authenticates with Cognito

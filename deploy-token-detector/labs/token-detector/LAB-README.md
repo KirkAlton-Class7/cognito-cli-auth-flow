@@ -1,7 +1,7 @@
 # Unused Token Detector Lab
 
 Hands-on lab for extending the Cognito auth flow with token-use telemetry and unused-token detection.<br>
-Use the ready code path [here](../../README.md) if you want the concise runbook and packaged code.<br><br>
+Use the ready-to-use deployment materials [here](../../README.md) if you want the concise runbook and packaged code.<br><br>
 
 This lab is intentionally editing-first. You can edit directly in AWS, but the recommended flow is to copy starter code into `sandbox/`, edit locally, then add the edited code in AWS and deploy. The `quick-deployment/` files are finished references for comparison after the manual path makes sense. Use the runbook for the concise quick deployment flow.
 
@@ -81,8 +81,8 @@ Quick deployment pass:
 
 Start with the [full lab](lab-docs/deploy-token-detector-lab.md). Build the base auth flow first with either:
 
-* [REST Version](../../../REST/README.md)
-* [HTTPS Version](../../../HTTPS/README.md)
+* [REST Deployment](../../../REST/README.md)
+* [HTTPS Deployment](../../../HTTPS/README.md)
 
 ## Validation Checklist
 
@@ -122,7 +122,7 @@ Use this checklist before you consider the token detector lab complete:
 
 ## Final Check
 
-You are ready to leave this token detector lab when you can explain the full path without looking:
+You are ready to leave this token detector lab when you can explain the full flow without looking:
 
 ```text
 Cognito issues JWT tokens

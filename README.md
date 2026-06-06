@@ -21,8 +21,8 @@ The protected routes are intentionally simple:
 
 | Route | Runtime | Purpose |
 | --- | --- | --- |
-| `/prod/jedi` | Python | Validates the Python Lambda path behind Cognito authorization |
-| `/prod/sith` | Node.js | Validates the Node.js Lambda path behind Cognito authorization |
+| `/prod/jedi` | Python | Validates the Python Lambda route behind Cognito authorization |
+| `/prod/sith` | Node.js | Validates the Node.js Lambda route behind Cognito authorization |
 
 ## Implementations
 
@@ -53,7 +53,7 @@ Both implementations preserve the same Cognito user, challenge, MFA, and token f
 
 ## Documentation
 
-Use the runbooks for the concise build path:
+Use the runbooks for the concise deployment workflow:
 
 | Implementation | CLI Runbook | Console Runbook | Teardown |
 | --- | --- | --- | --- |
@@ -62,22 +62,22 @@ Use the runbooks for the concise build path:
 
 Use the lab walkthroughs for screenshots, deeper explanations, and step-by-step challenge-flow practice:
 
-| Area | Guided Path |
+| Area | Guided Lab |
 | --- | --- |
 | HTTPS auth flow | [HTTPS Lab README](HTTPS/labs/cognito-auth-flow-HTTPS/LAB-README.md) |
 | REST auth flow | [REST Lab README](REST/labs/cognito-auth-flow-REST/LAB-README.md) |
 | Token detector extension | [Unused Token Detector Lab README](deploy-token-detector/labs/token-detector/LAB-README.md) |
 
-## Build Modes
+## Deployment Methods
 
-Each implementation supports two infrastructure build modes:
+Each implementation supports two infrastructure deployment methods:
 
-| Mode | Best For |
+| Deployment | Best For |
 | --- | --- |
 | CLI | Repeatable rebuilds and direct AWS API visibility |
 | Console | Visual confirmation of service boundaries and AWS configuration screens |
 
-Both modes validate the deployed flow with token helper scripts, Cognito-issued JWTs, protected route calls, and CloudWatch logs.
+Both deployment methods validate the deployed flow with token helper scripts, Cognito-issued JWTs, protected route calls, and CloudWatch logs.
 
 ## Repository Structure
 

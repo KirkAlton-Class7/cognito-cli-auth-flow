@@ -1,6 +1,6 @@
 # HTTPS Teardown
 
-Use this to tear down the base HTTPS/HTTP API Cognito auth infrastructure. It does not remove token-detector resources.
+Use this to tear down the base HTTPS/HTTP API Cognito auth deployment. It does not remove token-detector resources.
 
 > [!WARNING]
 > These commands delete the HTTP API, Lambda functions, Cognito user pool, CloudWatch log groups, and IAM roles. Confirm you are using the HTTPS values before running teardown.

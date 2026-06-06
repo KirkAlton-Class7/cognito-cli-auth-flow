@@ -1,6 +1,6 @@
 # HTTPS Lab Teardown
 
-Use this to tear down the base HTTPS/HTTP API Cognito auth infrastructure. It removes the resources created by the base auth-flow lab. It does not remove token-detector resources.
+Use this to tear down the base HTTPS/HTTP API Cognito auth deployment. It removes the resources created by the base auth-flow deployment lab. It does not remove token-detector resources.
 
 > [!WARNING]
 > These commands delete the HTTP API, Lambda functions, Cognito user pool, CloudWatch log groups, and IAM roles. Confirm you are using the HTTPS lab values before running teardown.

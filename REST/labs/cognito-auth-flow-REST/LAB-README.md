@@ -32,8 +32,8 @@ The API routes are intentionally small so each authorization boundary is easy to
 
 | Route | Runtime | Purpose |
 | --- | --- | --- |
-| `/prod/jedi` | Python | Validates the Python Lambda path after REST authorization succeeds |
-| `/prod/sith` | Node.js | Validates the Node.js Lambda path after REST authorization succeeds |
+| `/prod/jedi` | Python | Validates the Python Lambda route after REST authorization succeeds |
+| `/prod/sith` | Node.js | Validates the Node.js Lambda route after REST authorization succeeds |
 
 ## What You Practice
 
@@ -69,14 +69,14 @@ Token helper script pass:
 ```
 
 > [!IMPORTANT]
-> Do the manual CLI pass first. Copying the `Session` value from `SELECT_CHALLENGE` into the password command, then copying the new `Session` into the MFA command, is the part that makes Cognito's challenge flow click. The export-based path is included after that so you can repeat the lab quickly.
+> Do the manual CLI pass first. Copying the `Session` value from `SELECT_CHALLENGE` into the password command, then copying the new `Session` into the MFA command, is the part that makes Cognito's challenge flow click. The export-based pass is included after that so you can repeat the lab quickly.
 
 ## Lab Assets
 
 | Path | Purpose |
 | --- | --- |
-| [lab-docs/LAB-CLI.md](lab-docs/LAB-CLI.md) | CLI-first guided lab. |
-| [lab-docs/LAB-CONSOLE.md](lab-docs/LAB-CONSOLE.md) | Console-first guided lab using `env.example` copied to `.env` for planned values and resource outputs. |
+| [lab-docs/LAB-CLI.md](lab-docs/LAB-CLI.md) | CLI-first guided deployment lab. |
+| [lab-docs/LAB-CONSOLE.md](lab-docs/LAB-CONSOLE.md) | Console-first guided deployment lab using `env.example` copied to `.env` for planned values and resource outputs. |
 | [env.example](env.example) | Dotenv template to copy and rename to `.env` before starting the lab. |
 | [lab-docs/TEARDOWN_REST.md](lab-docs/TEARDOWN_REST.md) | Lab-specific teardown for resources created by this lab. |
 | [../../docs/RUNBOOK-CLI.md](../../docs/RUNBOOK-CLI.md) | Lean CLI reference for the same REST flow. |
@@ -87,7 +87,7 @@ Token helper script pass:
 
 ## Recommended Order
 
-Start with the Console lab if you want to see each AWS service boundary and capture the visual workflow. Start with the CLI lab if you want repeatable commands and a faster rebuild path.
+Start with the Console lab if you want to see each AWS service boundary and capture the visual workflow. Start with the CLI lab if you want repeatable commands and a faster rebuild workflow.
 
 After the base REST auth flow works, continue with the token detector add-on:
 
@@ -136,7 +136,7 @@ Use this checklist before you consider the REST lab complete:
 
 ## Final Check
 
-You are ready to leave this REST lab when you can explain the full path without looking:
+You are ready to leave this REST lab when you can explain the full flow without looking:
 
 ```text
 Chewbacca authenticates with Cognito

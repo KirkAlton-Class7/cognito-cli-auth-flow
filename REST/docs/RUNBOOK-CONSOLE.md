@@ -539,7 +539,7 @@ Jedi route test before the authorizer:
 
 Both unprotected route tests:
 
-![Unprotected API path tests](/assets/images/015-unprotected-api-tests.png)
+![Unprotected API route tests](/assets/images/015-unprotected-api-tests.png)
 
 Validation:
 
@@ -835,7 +835,7 @@ Create the user in Cognito, then complete the hosted login flow for continuity.
 
 ### 12.2 Managed Login Completion Path
 
-Use this path when you want the user to experience the hosted Cognito login flow:
+Use this option when you want the user to experience the hosted Cognito login flow:
 
 #### Steps
 
@@ -879,7 +879,7 @@ If the challenge takes too long, Cognito may show a session expiration warning:
 > [!NOTE]
 > If the challenge session expires during managed login, restart the hosted login sequence. This runbook uses a 15-minute authentication flow session duration; access and ID tokens remain valid for 60 minutes.
 
-Alternate temporary-password challenge path:
+Alternate temporary-password challenge flow:
 
 ![Respond to new password challenge](/assets/images/014-new-password-challenge.png)
 
@@ -1248,7 +1248,7 @@ aws cognito-idp set-user-mfa-preference \
 > If the user already enrolled MFA through managed login, you can skip the enrollment commands and continue with `USER_AUTH`.
 
 > [!NOTE]
-> The two software-token screenshots above show the challenge-session enrollment variant. The primary command path in this runbook uses `TEMP_ACCESS_TOKEN`; both approaches are valid Cognito enrollment patterns when the session or access token belongs to the same active authentication flow.
+> The two software-token screenshots above show the challenge-session enrollment variant. The primary command flow in this runbook uses `TEMP_ACCESS_TOKEN`; both approaches are valid Cognito enrollment patterns when the session or access token belongs to the same active authentication flow.
 
 ### 17.2 Alternate Option: Enroll TOTP Through Managed Login
 
@@ -1284,7 +1284,7 @@ Use this option when you want to enroll MFA through the hosted Cognito login pag
 
 ![Successful sign-in](/assets/images/032-successful-sign-in.png)
 
-After this path, continue with `USER_AUTH`. You do not need to repeat the CLI software-token enrollment commands unless you want to practice both methods.
+After this flow, continue with `USER_AUTH`. You do not need to repeat the CLI software-token enrollment commands unless you want to practice both methods.
 
 ### 17.3 Start `USER_AUTH`
 

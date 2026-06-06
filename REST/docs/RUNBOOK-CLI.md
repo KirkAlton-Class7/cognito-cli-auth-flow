@@ -479,7 +479,7 @@ HTTP/2 200
 
 Both unprotected route tests:
 
-![Unprotected API path tests](/assets/images/015-unprotected-api-tests.png)
+![Unprotected API route tests](/assets/images/015-unprotected-api-tests.png)
 
 Validation:
 
@@ -537,7 +537,7 @@ aws cognito-idp set-user-pool-mfa-config \
 ```
 
 > [!NOTE]
-> If you want a softer enrollment path while testing, use `OPTIONAL` instead of `ON`. The managed login flow in this runbook intentionally walks the user through authenticator setup.
+> If you want a softer enrollment flow while testing, use `OPTIONAL` instead of `ON`. The managed login flow in this runbook intentionally walks the user through authenticator setup.
 
 ## 11. Configure App Clients
 
@@ -611,7 +611,7 @@ echo "$CLIENT_JSON" | jq '{ClientName,ExplicitAuthFlows,AuthSessionValidity,Acce
 
 ### 11.3 Create Managed Login Styling
 
-The CLI path still creates a Cognito managed login page so the app client has a complete hosted login experience.
+The CLI deployment still creates a Cognito managed login page so the app client has a complete hosted login experience.
 
 #### Required Console Step
 
@@ -1044,7 +1044,7 @@ aws cognito-idp set-user-mfa-preference \
 > If the user already enrolled MFA through managed login, you can skip the enrollment commands and continue with `USER_AUTH`.
 
 > [!NOTE]
-> The two software-token screenshots above show the challenge-session enrollment variant. The primary command path in this runbook uses `TEMP_ACCESS_TOKEN`; both approaches are valid Cognito enrollment patterns when the session or access token belongs to the same active authentication flow.
+> The two software-token screenshots above show the challenge-session enrollment variant. The primary command flow in this runbook uses `TEMP_ACCESS_TOKEN`; both approaches are valid Cognito enrollment patterns when the session or access token belongs to the same active authentication flow.
 
 ### 17.2 Alternate Option: Enroll TOTP Through Managed Login
 
@@ -1080,7 +1080,7 @@ Use this option when you want to enroll MFA through the hosted Cognito login pag
 
 ![Successful sign-in](/assets/images/032-successful-sign-in.png)
 
-After this path, continue with `USER_AUTH`. You do not need to repeat the CLI software-token enrollment commands unless you want to practice both methods.
+After this flow, continue with `USER_AUTH`. You do not need to repeat the CLI software-token enrollment commands unless you want to practice both methods.
 
 ### 17.3 Start `USER_AUTH`
 

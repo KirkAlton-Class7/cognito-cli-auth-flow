@@ -1,6 +1,6 @@
 # REST Lab Teardown
 
-Use this to tear down the base REST Cognito auth infrastructure. It removes the resources created by the base auth-flow lab. It does not remove token-detector resources.
+Use this to tear down the base REST Cognito auth deployment. It removes the resources created by the base auth-flow deployment lab. It does not remove token-detector resources.
 
 > [!WARNING]
 > These commands delete the REST API, Lambda functions, Cognito user pool, CloudWatch log groups, and IAM roles. Confirm you are using the REST lab values before running teardown.

@@ -1,6 +1,6 @@
 # Token Detector REST Teardown
 
-Use this to tear down the REST Cognito auth infrastructure plus the unused-token detector add-on. Skip any command for a resource you did not create.
+Use this to tear down the REST Cognito auth deployment plus the unused-token detector add-on. Skip any command for a resource you did not create.
 
 > [!WARNING]
 > These commands delete API Gateway, Lambda, Cognito, DynamoDB, EventBridge Scheduler, CloudWatch, SNS, and IAM resources. Confirm you are using the REST values before running teardown.

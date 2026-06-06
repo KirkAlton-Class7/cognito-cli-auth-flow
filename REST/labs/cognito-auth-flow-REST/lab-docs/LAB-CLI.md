@@ -479,7 +479,7 @@ HTTP/2 200
 
 Both unprotected route tests:
 
-![Unprotected API path tests](/assets/images/015-unprotected-api-tests.png)
+![Unprotected API route tests](/assets/images/015-unprotected-api-tests.png)
 
 Validation:
 
@@ -537,7 +537,7 @@ aws cognito-idp set-user-pool-mfa-config \
 ```
 
 > [!NOTE]
-> If you want an easier enrollment path while testing, use `OPTIONAL` instead of `ON`. The managed login flow in this lab intentionally walks the user through authenticator setup, which is best practice for production use.
+> If you want an easier enrollment flow while testing, use `OPTIONAL` instead of `ON`. The managed login flow in this lab intentionally walks the user through authenticator setup, which is best practice for production use.
 
 ## 11. Configure App Clients
 
@@ -904,11 +904,11 @@ aws cognito-idp set-user-mfa-preference \
 > If the user already enrolled MFA through managed login, you can skip the enrollment commands and continue with `USER_AUTH`.
 
 > [!NOTE]
-> The two software-token screenshots above show the challenge-session enrollment variant. The primary command path in this lab uses `TEMP_ACCESS_TOKEN`; both approaches are valid Cognito enrollment patterns when the session or access token belongs to the same active authentication flow.
+> The two software-token screenshots above show the challenge-session enrollment variant. The primary command flow in this lab uses `TEMP_ACCESS_TOKEN`; both approaches are valid Cognito enrollment patterns when the session or access token belongs to the same active authentication flow.
 
 ### 15.2 Alternate Option: Enroll TOTP Through Managed Login
 
-This alternate path uses the hosted Cognito login page to enroll the same software-token MFA factor. It is useful for comparing the user-facing managed login experience with the CLI enrollment flow above. Both paths result in a user who can answer the later `SOFTWARE_TOKEN_MFA` challenge.
+This alternate flow uses the hosted Cognito login page to enroll the same software-token MFA factor. It is useful for comparing the user-facing managed login experience with the CLI enrollment flow above. Both flows result in a user who can answer the later `SOFTWARE_TOKEN_MFA` challenge.
 
 1. Open **View login page** from the CLI app client.
 
@@ -944,7 +944,7 @@ If the challenge session expires while you are learning the flow, restart the ho
 
 ![Successful sign-in](/assets/images/032-successful-sign-in.png)
 
-After this path, continue with `USER_AUTH`. You do not need to repeat the CLI software-token enrollment commands unless you want to practice both methods.
+After this flow, continue with `USER_AUTH`. You do not need to repeat the CLI software-token enrollment commands unless you want to practice both methods.
 
 ### 15.3 Start `USER_AUTH`
 
@@ -1283,7 +1283,7 @@ Use this checklist before you consider the REST lab complete:
 
 ## Final Check
 
-You are ready to leave this REST lab when you can explain the full path without looking:
+You are ready to leave this REST lab when you can explain the full flow without looking:
 
 ```text
 Chewbacca authenticates with Cognito

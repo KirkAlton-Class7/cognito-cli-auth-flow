@@ -1,6 +1,6 @@
 # Token Detector HTTPS Lab Teardown
 
-Use this to tear down the HTTPS Cognito auth infrastructure plus the unused-token detector resources created by this lab. Skip any command for a resource you did not create.
+Use this to tear down the HTTPS Cognito auth deployment plus the unused-token detector resources created by this lab. Skip any command for a resource you did not create.
 
 > [!WARNING]
 > These commands delete API Gateway, Lambda, Cognito, DynamoDB, EventBridge Scheduler, CloudWatch, SNS, and IAM resources. Confirm you are using the HTTPS token-detector lab values before running teardown.
