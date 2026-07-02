@@ -1,0 +1,147 @@
+# TFLint project override template.
+#
+# TFLint loads config in this order:
+#   1. --config FILE
+#   2. TFLINT_CONFIG_FILE
+#   3. ./.tflint.hcl
+#   4. ~/.tflint.hcl
+#
+# A project-local .tflint.hcl does not merge with ~/.tflint.hcl. It replaces it.
+# Keep this file named .tflint.hcl.template until you intentionally want a
+# project-specific override.
+#
+# To override global config for one Terraform project:
+#   1. Rename .tflint.hcl.template to .tflint.hcl
+#   2. Uncomment the plugin/config/rule blocks you want
+#   3. Run: tflint --init
+
+# -------------------------------------------------------------------
+# Default Global Rulesets
+# -------------------------------------------------------------------
+
+# Core Terraform language rules.
+# Uncomment to use the built-in Terraform ruleset in this project override.
+#
+# plugin "terraform" {
+#   enabled = true
+#   preset  = "recommended"
+# }
+
+# AWS provider rules.
+# Uncomment for AWS projects.
+#
+# plugin "aws" {
+#   enabled = true
+#   version = "0.34.0"
+#   source  = "github.com/terraform-linters/tflint-ruleset-aws"
+# }
+
+# Google Cloud provider rules.
+# Uncomment for GCP projects.
+#
+# plugin "google" {
+#   enabled = true
+#   version = "0.31.0"
+#   source  = "github.com/terraform-linters/tflint-ruleset-google"
+# }
+
+# AzureRM provider rules.
+# Uncomment for Azure projects.
+#
+# plugin "azurerm" {
+#   enabled = true
+#   version = "0.26.0"
+#   source  = "github.com/terraform-linters/tflint-ruleset-azurerm"
+# }
+
+# -------------------------------------------------------------------
+# Project Config Overrides
+# -------------------------------------------------------------------
+
+# Optional: require a minimum TFLint version for this project.
+#
+# tflint {
+#   required_version = ">= 0.50"
+# }
+
+# Project-only config settings.
+#
+# config {
+#   # Output format for normal tflint runs.
+#   # Common values: "default", "compact", "json", "sarif".
+#   # Note: ignored from config during --recursive; use -f compact instead.
+#   format = "compact"
+#
+#   # Return exit code 0 even when findings are present.
+#   # Useful while adopting linting in old labs; keep false for strict checks.
+#   # Note: ignored from config during --recursive; use --force instead.
+#   force = false
+#
+#   # Which modules TFLint should inspect.
+#   # Common values: "local" (default), "all", "none".
+#   call_module_type = "local"
+#
+#   # Use Terraform variable files during linting.
+#   # varfile = ["terraform.tfvars", "dev.tfvars"]
+#
+#   # Pass individual Terraform variables during linting.
+#   # variables = ["env=dev", "project_id=my-project"]
+#
+#   # Plugin cache directory. Leave commented unless you need project-specific
+#   # plugin isolation.
+#   # plugin_dir = "~/.tflint.d/plugins"
+# }
+
+# Severity gate note:
+# minimum failure severity is a CLI flag, not part of the config template:
+#   tflint --minimum-failure-severity=warning
+
+# -------------------------------------------------------------------
+# Rule Overrides
+# -------------------------------------------------------------------
+
+# Disable or tune a specific Terraform language rule.
+# Use this only when a rule is noisy for a project and you understand the tradeoff.
+#
+# rule "terraform_required_version" {
+#   enabled = false
+# }
+#
+# rule "terraform_required_providers" {
+#   enabled = false
+# }
+
+# Provider-specific rule override examples.
+# Rule names vary by provider ruleset. Replace the rule name with the exact
+# finding reported by tflint.
+#
+# rule "aws_instance_invalid_type" {
+#   enabled = false
+# }
+#
+# rule "google_compute_instance_invalid_machine_type" {
+#   enabled = false
+# }
+#
+# rule "azurerm_resource_missing_tags" {
+#   enabled = false
+# }
+
+# -------------------------------------------------------------------
+# Narrow To One Cloud
+# -------------------------------------------------------------------
+
+# Example: AWS-only project.
+# Leave Terraform + AWS uncommented and keep Google/Azure commented so
+# tflint --init only prepares rulesets this project needs.
+#
+# plugin "terraform" {
+#   enabled = true
+#   preset  = "recommended"
+# }
+#
+# plugin "aws" {
+#   enabled = true
+#   version = "0.34.0"
+#   source  = "github.com/terraform-linters/tflint-ruleset-aws"
+# }
